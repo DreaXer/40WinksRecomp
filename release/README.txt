@@ -1,6 +1,6 @@
-40 WINKS: RECOMPILED
+40 WINKS : DREAMCOMPILED
 Version 0.1.0
-====================
+========================
 
 A native Windows port of the N64 game 40 Winks, made with N64: Recompiled and RT64.
 It does NOT contain any game asset: you need your own copy of the game.

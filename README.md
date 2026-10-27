@@ -1,6 +1,6 @@
-# 40 Winks: Recompiled
+# 40 Winks : Dreamcompiled
 
-40 Winks: Recompiled is a native PC port of the Nintendo 64 game **40 Winks**, made by **statically recompiling** the
+40 Winks : Dreamcompiled is a native PC port of the Nintendo 64 game **40 Winks**, made by **statically recompiling** the
 game's code with [N64: Recompiled](https://github.com/N64Recomp/N64Recomp). It uses [RT64](https://github.com/rt64/rt64)
 to render the game, with enhancements such as high framerates and widescreen.
 

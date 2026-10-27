@@ -1,4 +1,4 @@
-// 40 Winks: Recompiled. Runtime glue, adapted from dk64recomp's src/main/main.cpp without the DK64-specific parts
+// 40 Winks : Dreamcompiled. Runtime glue, adapted from dk64recomp's src/main/main.cpp without the DK64-specific parts
 // (patches, co-op, launcher animation, custom config).
 #include <cstdio>
 #include <cstring>
@@ -120,7 +120,7 @@ ultramodern::renderer::WindowHandle create_window(ultramodern::gfx_callbacks_t::
     flags |= SDL_WINDOW_VULKAN;
 #endif
 
-    window = SDL_CreateWindow("40 Winks: Recompiled", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 900, flags);
+    window = SDL_CreateWindow("40 Winks : Dreamcompiled", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1600, 900, flags);
 
     if (window == nullptr) {
         exit_error("Failed to create window: %s\n", SDL_GetError());
@@ -594,7 +594,7 @@ int main(int argc, char** argv) {
 
     NFD_Init();
 
-    recompui::programconfig::set_program_name("40 Winks: Recompiled");
+    recompui::programconfig::set_program_name("40 Winks : Dreamcompiled");
     recompui::programconfig::set_program_id(u8"40WinksRecompiled");
 
     // Initialize SDL audio and set the output frequency.
