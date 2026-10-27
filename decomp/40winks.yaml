@@ -1,0 +1,82 @@
+name: 40 Winks (European)
+sha1: 282b97c6a6eb79535e618fc2651b6156fff65ea4
+options:
+  basename: 40winks
+  target_path: ..\baserom.eur.z64
+  elf_path: build/40winks.elf
+  base_path: .
+  platform: n64
+  compiler: KMC
+
+  # asm_path: asm
+  # src_path: src
+  # build_path: build
+  # create_asm_dependencies: True
+
+  ld_script_path: 40winks.ld
+  ld_dependencies: True
+  ld_discard_section: False # lld refuses to discard .shstrtab
+  ld_sections_denylist: [.MIPS.abiflags, .reginfo, .pdr, .comment, .got, .gnu.attributes, .mdebug]
+
+  find_file_boundaries: True
+  header_encoding: ASCII
+
+  o_as_suffix: True
+  use_legacy_include_asm: False
+  mips_abi_float_regs: numeric
+
+  # section_order: [".text", ".data", ".rodata", ".bss"]
+  # auto_link_sections: [".data", ".rodata", ".bss"]
+
+  symbol_addrs_path:
+    - symbol_addrs.txt
+  reloc_addrs_path:
+    - reloc_addrs.txt
+
+  undefined_funcs_auto_path: undefined_funcs_auto.txt
+  undefined_syms_auto_path: undefined_syms_auto.txt
+
+  extensions_path: tools/splat_ext
+
+  # string_encoding: ASCII
+  # data_string_encoding: ASCII
+  rodata_string_guesser_level: 2
+  data_string_guesser_level: 2
+  libultra_symbols: True
+  hardware_regs: True
+  gfx_ucode: f3dex
+segments:
+  - name: header
+    type: header
+    start: 0x0
+
+  - name: ipl3
+    type: bin
+    start: 0x40
+
+  - name: entry
+    type: code
+    start: 0x1000
+    vram: 0x80000400
+    subsegments:
+      - [0x1000, hasm]
+
+  - name: main
+    type: code
+    start: 0x1050
+    vram: 0x80000450
+    follows_vram: entry
+    bss_size: 0x150230
+    subalign: 4 # hook code at 0x800B7378 is only 8-aligned
+    subsegments:
+      - [0x1050, asm]
+      - [0x80C80, data]
+      - { start: 0xB7F78, type: asm, linker_section_order: .data } # hook injected by the final release, called from 0x8005A7FC
+      - [0xB7FA8, data]
+      - { type: bss, vram: 0x800B8620 }
+
+  - type: bin
+    start: 0xB9220
+    follows_vram: main
+
+  - [0x2000000]

@@ -1,0 +1,363 @@
+# Config file for 40 Winks (final release, sha1 282b97c6a6eb79535e618fc2651b6156fff65ea4) recompilation
+
+[input]
+entrypoint = 0x80000400
+trace_mode = false  # debug: call tracing, see include/trace.h (set to false for normal builds)
+# Paths are relative to the location of this config file.
+# The ELF comes from decomp/ (splat + tools/build_rom.py, byte-matching rebuild of the ROM).
+elf_path = "decomp/build/40winks.elf"
+output_func_path = "RecompiledFuncs"
+
+[patches]
+stubs = [
+    # Handwritten CP0 code at the end of .text, never called; it jumps to 0x84001064, which is not code.
+    "func_80080030",
+]
+ignored = [
+    # libultra internal never called (func_80041590 / func_800416E8 are recompiled now, called by osPfsChecker_40w)
+    "func_80041850",
+]
+
+# Controller Pak (src/game/pak.cpp): on hardware osMotorInit fails with PFS_ERR_DEVICE (0xB) on a port that holds a
+# Controller Pak; the runtime's osMotorInit succeeds on every connected controller. Same result as hardware, after both
+# calls (func_8002ABA4 = rumble init of port $s0; func_8002DA00 = request 13 of the pak thread, port in D_80128500).
+[[patches.hook]]
+func = "func_8002ABA4"
+text = "{ extern int forty_pak_present(int); if (forty_pak_present((int)ctx->r16)) ctx->r2 = 0xB; }"
+before_vram = 0x8002ABF4
+
+[[patches.hook]]
+func = "func_8002DA00"
+text = "{ extern int forty_pak_present(int); if (forty_pak_present(MEM_W(0, (gpr)(int32_t)0x80128500))) ctx->r2 = 0xB; }"
+before_vram = 0x8002DFAC
+
+# func_800091A4 picks the audio rate from osTvType: PAL 22050 Hz / 50 fps, else 26461 Hz / 60 fps. The game is built for
+# 22050 Hz (the 26461 Hz branch plays 1.2x too fast and too high), but PAL video modes break rendering, so keep NTSC
+# video and force the PAL values (22050 Hz, 50 fps) before the store of the rate. The VI thread runs at 50 Hz (events.cpp).
+[[patches.hook]]
+func = "func_800091A4"
+text = "ctx->r3 = 22050; ctx->r2 = 0x32;"
+before_vram = 0x800091F0
+
+# RT64 frame interpolation: the display list of a frame starts at D_801D06C0's list (task data_ptr), and func_80002F20 ends
+# its setup with D_801D06C0 = write cursor. src/game/interpolation.cpp appends gEXEnable, gEXSetRefreshRate(25) and an
+# identity matrix there.
+[[patches.hook]]
+func = "func_80002F20"
+text = "{ extern void winks_frame_start(uint8_t*); winks_frame_start(rdram); }"
+before_vram = 0x800030AC
+
+# RT64 matrix groups (src/game/interpolation.cpp): one group per 3D object, id = object data pointer (its matrix is at
+# data + 0x10 + parity * 0x40). Pushed just before each G_MTX 0xDA380002, popped right after each G_POPMTX 0xD8380002.
+[[patches.hook]]
+func = "func_80000450"
+text = "{ extern void winks_mtx_group(uint8_t*, uint32_t); winks_mtx_group(rdram, 0x801CD530); }"
+before_vram = 0x80000500
+
+[[patches.hook]]
+func = "func_8001A7D8"
+text = "{ extern void winks_mtx_group(uint8_t*, uint32_t); winks_mtx_group(rdram, (uint32_t)ctx->r17); }"
+before_vram = 0x8001A8D8
+
+[[patches.hook]]
+func = "func_8001CF20"
+text = "{ extern void winks_mtx_group(uint8_t*, uint32_t); winks_mtx_group(rdram, (uint32_t)ctx->r16); }"
+before_vram = 0x8001CFB4
+
+[[patches.hook]]
+func = "func_8001CF20"
+text = "{ extern void winks_mtx_group(uint8_t*, uint32_t); winks_mtx_group(rdram, (uint32_t)ctx->r16); }"
+before_vram = 0x8001D1EC
+
+[[patches.hook]]
+func = "func_80000548"
+text = "{ extern void winks_mtx_group_pop(uint8_t*); winks_mtx_group_pop(rdram); }"
+before_vram = 0x80000840
+
+[[patches.hook]]
+func = "func_8001B7F8"
+text = "{ extern void winks_mtx_group_pop(uint8_t*); winks_mtx_group_pop(rdram); }"
+before_vram = 0x8001B9E4
+
+[[patches.hook]]
+func = "func_8001B7F8"
+text = "{ extern void winks_mtx_group_pop(uint8_t*); winks_mtx_group_pop(rdram); }"
+before_vram = 0x8001BB38
+
+# func_8001A7D8 (object pushed here) has no G_POPMTX: pop the group after the object is drawn.
+[[patches.hook]]
+func = "func_8001ACB4"
+text = "{ extern void winks_mtx_group_pop(uint8_t*); winks_mtx_group_pop(rdram); }"
+before_vram = 0x8001B0E4
+
+# Particle batches (world-space vertices written by the CPU): one group per call, see src/game/interpolation.cpp.
+[[patches.hook]]
+func = "func_800244AC"
+text = "{ extern void winks_particles_begin(uint8_t*); winks_particles_begin(rdram); }"
+before_vram = 0x800244AC
+
+[[patches.hook]]
+func = "func_800244AC"
+text = "{ extern void winks_particles_end(uint8_t*); winks_particles_end(rdram); }"
+before_vram = 0x800245D8
+
+[[patches.hook]]
+func = "func_800245E0"
+text = "{ extern void winks_particles_begin(uint8_t*); winks_particles_begin(rdram); }"
+before_vram = 0x800245E0
+
+[[patches.hook]]
+func = "func_800245E0"
+text = "{ extern void winks_particles_end(uint8_t*); winks_particles_end(rdram); }"
+before_vram = 0x80024784
+
+# Rotated 2D sprites (menu letters...): one group per sprite matrix, see src/game/interpolation.cpp.
+[[patches.hook]]
+func = "func_80000C4C"
+text = "{ extern void winks_sprite_group(uint8_t*); winks_sprite_group(rdram); }"
+before_vram = 0x80000CDC
+
+[[patches.hook]]
+func = "func_800030C0"
+text = "{ extern void winks_sprites_frame_end(uint8_t*); winks_sprites_frame_end(rdram); }"
+before_vram = 0x800030C0
+
+# Sprite glyph (6th argument, read by func_80000FB0 at 0x34($sp) after its 0x20 stack frame), see winks_sprite_group.
+[[patches.hook]]
+func = "func_80000FB0"
+text = "{ extern void winks_sprite_number(uint32_t); winks_sprite_number((uint32_t)MEM_W(0x14, ctx->r29)); }"
+before_vram = 0x80000FB0
+
+# Sprite position (a0 = x, a1 = y), see winks_sprite_group.
+[[patches.hook]]
+func = "func_80000C4C"
+text = "{ extern void winks_sprite_position(int32_t, int32_t); winks_sprite_position((int32_t)ctx->r4, (int32_t)ctx->r5); }"
+before_vram = 0x80000C4C
+
+# Particle groups (see src/game/interpolation.cpp; $ra is not kept by recompiled code). Rain: id = its call site.
+[[patches.hook]]
+func = "func_8000134C"
+text = "{ extern void winks_particles_id(uint32_t); winks_particles_id(0x80001960); }"
+before_vram = 0x80001960
+
+# Object shadows: one quad per object ($s0, list D_801D5D08), id = 0x50 tag | object pointer.
+[[patches.hook]]
+func = "func_80011F28"
+text = "{ extern void winks_particles_id(uint32_t); winks_particles_id(0x50000000 | ((uint32_t)ctx->r16 & 0xFFFFFF)); }"
+before_vram = 0x800121A0
+
+# Billboard objects (a0 = object): the whole function is one group, id = 0x51 tag | object pointer.
+[[patches.hook]]
+func = "func_80026D18"
+text = "{ extern void winks_particles_group(uint8_t*, uint32_t); winks_particles_group(rdram, 0x51000000 | ((uint32_t)ctx->r4 & 0xFFFFFF)); }"
+before_vram = 0x80026D18
+
+[[patches.hook]]
+func = "func_80026D18"
+text = "{ extern void winks_particles_group_end(uint8_t*); winks_particles_group_end(rdram); }"
+before_vram = 0x80026D94
+
+# Level billboards (a0 = index in D_80132528): the whole function is one group, id = 0x52 tag | index.
+[[patches.hook]]
+func = "func_80026164"
+text = "{ extern void winks_particles_group(uint8_t*, uint32_t); winks_particles_group(rdram, 0x52000000 | ((uint32_t)ctx->r4 & 0xFFFFFF)); }"
+before_vram = 0x80026164
+
+[[patches.hook]]
+func = "func_80026164"
+text = "{ extern void winks_particles_group_end(uint8_t*); winks_particles_group_end(rdram); }"
+before_vram = 0x80026D10
+
+# func_80002320 times a frame by spinning on a counter (D_801CD0C0) that another thread increments.
+# On N64 the VI interrupt preempts the loop; ultramodern only switches threads on OS calls, so yield inside both loops.
+[[patches.hook]]
+func = "func_80002320"
+text = "{ extern void yield_self_1ms(uint8_t*); yield_self_1ms(rdram); }"
+before_vram = 0x80002344
+
+[[patches.hook]]
+func = "func_80002320"
+text = "{ extern void yield_self_1ms(uint8_t*); yield_self_1ms(rdram); }"
+before_vram = 0x80002378
+
+# Same pattern: spins until D_800827E0 changes.
+[[patches.hook]]
+func = "func_80002E78"
+text = "{ extern void yield_self_1ms(uint8_t*); yield_self_1ms(rdram); }"
+before_vram = 0x80002E90
+
+# Main loop busy-waits: frame pacing on D_801CD0C0, and "while (*flag) ;" waits on flags cleared by other threads.
+[[patches.hook]]
+func = "func_80001A0C"
+text = "{ extern void yield_self_1ms(uint8_t*); yield_self_1ms(rdram); }"
+before_vram = 0x80001A24
+
+[[patches.hook]]
+func = "func_80001A0C"
+text = "{ extern void yield_self_1ms(uint8_t*); yield_self_1ms(rdram); }"
+before_vram = 0x80001A4C
+
+[[patches.hook]]
+func = "func_80001A0C"
+text = "{ extern void yield_self_1ms(uint8_t*); yield_self_1ms(rdram); }"
+before_vram = 0x80001A70
+
+[[patches.hook]]
+func = "func_80001A0C"
+text = "{ extern void yield_self_1ms(uint8_t*); yield_self_1ms(rdram); }"
+before_vram = 0x80001A98
+
+[[patches.hook]]
+func = "func_80001C9C"
+text = "{ extern void yield_self_1ms(uint8_t*); yield_self_1ms(rdram); }"
+before_vram = 0x80001CC4
+
+[[patches.hook]]
+func = "func_80001C9C"
+text = "{ extern void yield_self_1ms(uint8_t*); yield_self_1ms(rdram); }"
+before_vram = 0x80001DE0
+
+# func_80013A38 (patched in the final release) dispatches on the asset type with "jal f; addiu $ra, $ra, N" so that
+# f returns straight to the epilogue. N64Recomp returns to the next instruction instead, so do the call and jump to
+# the epilogue explicitly. (type 3, the LZ decompressor at 0x80013A80, already falls through to the epilogue.)
+[[patches.hook]]
+func = "func_80013A38"
+text = "func_80012F10(rdram, ctx); goto L_80013A8C;"
+before_vram = 0x80013A70
+
+[[patches.hook]]
+func = "func_80013A38"
+text = "func_800139A8(rdram, ctx); goto L_80013A8C;"
+before_vram = 0x80013A78
+
+# func_80006F90: a switch inside a loop compiled as "lw $v0, 0($a1); jr $v0" with $a1 walking jtbl_800A7ED0 (not the
+# base + index*4 pattern N64Recomp detects), so it became an unresolved indirect call. Dispatch the two cases here.
+[[patches.hook]]
+func = "func_80006F90"
+text = """{
+        uint32_t target = (uint32_t)MEM_W(0, ctx->r5);
+        ctx->r2 = (gpr)(int32_t)target;
+        if (target == 0x80007018) {
+            MEM_W(0, (gpr)(int32_t)(0x801CD0E4 + (uint32_t)ctx->r3)) = 0;
+            MEM_W(0, (gpr)(int32_t)(0x801CD0F0 + (uint32_t)ctx->r3)) = (int32_t)ctx->r11;
+        } else if (target == 0x80007038) {
+            MEM_W(0, (gpr)(int32_t)(0x801CD0E4 + (uint32_t)ctx->r3)) = (int32_t)ctx->r10;
+            MEM_W(0, (gpr)(int32_t)(0x801CD0F0 + (uint32_t)ctx->r3)) = (int32_t)ctx->r10;
+        } else {
+            switch_error(__func__, 0x80007010, 0x800A7ED0);
+        }
+        ctx->r3 = ADD32(ctx->r3, 0x24);
+        goto L_80007054;
+    }"""
+before_vram = 0x8000700C
+
+# Game views filling the 4:3 screen. 1P = whole screen; 2P: P1 = left half, P2 = right half, full height, no border.
+# D_80086FF0 holds 3 screen rectangles {center x, center y, width, height} as fractions of the framebuffer (1P, 2P P1,
+# 2P P2). func_80010B68 builds the viewports D_80086FC0 from it; func_80010C70 picks one per player (count D_800A346C,
+# current player D_800A3468) and emits viewport + scissor. Original rects: 1P 0.9125 x 1.0078 (292 pixels wide, black
+# bands left and right); 2P 0.45625 x 0.46875, centered at x 0.271875 and 0.725 (146x112 views, black bands and a gap).
+[[patches.hook]]
+func = "func_80010B68"
+text = """{
+        MEM_W(0, (gpr)(int32_t)0x80086FF8) = 0x3F800000; MEM_W(0, (gpr)(int32_t)0x80086FFC) = 0x3F800000;  // 1P size 1.0, 1.0
+        MEM_W(0, (gpr)(int32_t)0x80087000) = 0x3E800000; MEM_W(0, (gpr)(int32_t)0x80087004) = 0x3F000000;  // P1 center 0.25, 0.5
+        MEM_W(0, (gpr)(int32_t)0x80087008) = 0x3F000000; MEM_W(0, (gpr)(int32_t)0x8008700C) = 0x3F800000;  // P1 size 0.5, 1.0
+        MEM_W(0, (gpr)(int32_t)0x80087010) = 0x3F400000; MEM_W(0, (gpr)(int32_t)0x80087014) = 0x3F000000;  // P2 center 0.75, 0.5
+        MEM_W(0, (gpr)(int32_t)0x80087018) = 0x3F000000; MEM_W(0, (gpr)(int32_t)0x8008701C) = 0x3F800000;  // P2 size 0.5, 1.0
+    }"""
+before_vram = 0x80010B68
+
+# func_80010C70 insets the scissor by 1 pixel on each side (black border, 2-pixel black line between the 2P views).
+# Replace it with the exact view: whole screen in 1P, half screen in 2P. ulx $a0, uly $t0, lrx $a3, lry $a2 (pixels), also
+# kept in D_8012AAF0 / D_8012E410 / D_8012BFC8 (D_80132270 is stored from $a2 after this point). Width D_801CD8D0,
+# height D_801321A8.
+[[patches.hook]]
+func = "func_80010C70"
+text = """{
+        int32_t w = MEM_W(0, (gpr)(int32_t)0x801CD8D0), h = MEM_W(0, (gpr)(int32_t)0x801321A8);
+        int split = MEM_W(0, (gpr)(int32_t)0x800A346C) == 2, p2 = split && MEM_W(0, (gpr)(int32_t)0x800A3468) != 0;
+        ctx->r4 = p2 ? w / 2 : 0; ctx->r8 = 0; ctx->r7 = (split && !p2) ? w / 2 : w; ctx->r6 = h;
+        MEM_W(0, (gpr)(int32_t)0x8012AAF0) = (int32_t)ctx->r4;
+        MEM_W(0, (gpr)(int32_t)0x8012E410) = (int32_t)ctx->r8;
+        MEM_W(0, (gpr)(int32_t)0x8012BFC8) = (int32_t)ctx->r7;
+    }"""
+before_vram = 0x80010F30
+
+# func_800104F0 (game camera) picks the perspective aspect in $f22: 4/3, or 16/9 when D_8008708C = 1 (built-in 16:9 option,
+# toggled by func_80010C3C). The 2P views are half as wide as the screen at full height: halve the aspect.
+[[patches.hook]]
+func = "func_800104F0"
+text = "if (MEM_W(0, (gpr)(int32_t)0x800A346C) == 2) ctx->f22.fl *= 0.5f;"
+before_vram = 0x80010578
+
+# Aspect Ratio Expand: RT64 widens the 3D drawn with the fixed-point projection (func_800353A0), but the float one
+# (func_800351F0, into D_80127E10, then D_80130C68) feeds the portal visibility (func_80018870 / func_80018ADC). Widen
+# only that one ($a3 = aspect), so rooms whose doorway is outside the 4:3 frame are still drawn.
+[[patches.hook]]
+func = "func_800104F0"
+text = "{ extern float winks_expand_factor(void); union { float f; uint32_t u; } a; a.f = ctx->f22.fl * winks_expand_factor(); ctx->r7 = (int32_t)a.u; }"
+before_vram = 0x800105A8
+
+# Aspect Ratio Expand: func_800140FC builds the view pyramid that clips portals and rooms (planes D_801CD400, via
+# func_80014A14) from hardcoded half-angles: 39 degrees horizontal (48 with the built-in 16:9 option), 32 vertical.
+# $f30 = tan(horizontal half-angle) * far, just computed: widen it like the screen.
+[[patches.hook]]
+func = "func_800140FC"
+text = "{ extern float winks_expand_factor(void); ctx->f30.fl *= winks_expand_factor(); }"
+before_vram = 0x8001419C
+
+# HUD on the screen edges in Aspect Ratio Expand (subject I, src/game/interpolation.cpp). func_800079D0 draws the HUD;
+# its 1P path starts at 0x80007AD4 (the 2P path calls func_800074C0 and is left as is), both end at 0x80007D4C.
+# The start hook goes after func_80024078, which sets the 4:3 scissor (G_SETSCISSOR from the viewport bounds).
+[[patches.hook]]
+func = "func_800079D0"
+text = "{ extern void winks_hud_start(uint8_t*); winks_hud_start(rdram); }"
+before_vram = 0x80007ADC
+
+# Counter $s1 of the loop: D_80082620[$s1].x (12-byte entries) < 0 on the left side, > 0 on the right side.
+[[patches.hook]]
+func = "func_800079D0"
+text = "{ extern void winks_hud_align(uint8_t*, int); winks_hud_align(rdram, MEM_W(0, (gpr)(int32_t)(0x80082620 + ctx->r17 * 12)) < 0 ? -1 : 1); }"
+before_vram = 0x80007C10
+
+# func_80007104 draws a centered counter.
+[[patches.hook]]
+func = "func_800079D0"
+text = "{ extern void winks_hud_align(uint8_t*, int); winks_hud_align(rdram, 0); }"
+before_vram = 0x80007D3C
+
+[[patches.hook]]
+func = "func_800079D0"
+text = "{ extern void winks_hud_end(uint8_t*); winks_hud_end(rdram); }"
+before_vram = 0x80007D4C
+
+# func_800071D0: per-player counters from D_80082770 (1P: x = 28, left side). winks_hud_align does nothing outside the 1P HUD.
+[[patches.hook]]
+func = "func_800071D0"
+text = "{ extern void winks_hud_align(uint8_t*, int); winks_hud_align(rdram, -1); }"
+before_vram = 0x800073AC
+
+# 2P HUD (func_800074C0) drawn larger in Expand, see winks_hud2p_* in src/game/interpolation.cpp.
+[[patches.hook]]
+func = "func_800074C0"
+text = "{ extern void winks_hud2p_scale(uint8_t*); winks_hud2p_scale(rdram); }"
+before_vram = 0x800074C0
+
+# Loop head ($s1 = counter): first iteration only, after func_80024158 has set the 4:3 scissor.
+[[patches.hook]]
+func = "func_800074C0"
+text = "if (ctx->r17 == 0) { extern void winks_hud2p_start(uint8_t*); winks_hud2p_start(rdram); }"
+before_vram = 0x8000765C
+
+[[patches.hook]]
+func = "func_800074C0"
+text = "{ extern void winks_hud2p_end(uint8_t*); winks_hud2p_end(rdram); }"
+before_vram = 0x80007998
+
+# Portal scissors widened for interpolated frames (src/game/interpolation.cpp, winks_portal_scissor): union of this and
+# last frame's rectangle per room. $a0 = G_SETSCISSOR command (word 0 stored), $v1 = word 1 (stored in the delay slot),
+# $s2 = loop index, room id = byte at $s1 - 8.
+[[patches.hook]]
+func = "func_80019220"
+text = "{ extern uint32_t winks_portal_scissor(uint8_t*, uint32_t, uint32_t, uint32_t, uint32_t); ctx->r3 = winks_portal_scissor(rdram, (uint32_t)ctx->r18, MEM_BU(-8, ctx->r17), (uint32_t)ctx->r4, (uint32_t)ctx->r3); }"
+before_vram = 0x8001978C

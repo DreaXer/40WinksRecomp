@@ -1,0 +1,43 @@
+40 WINKS: RECOMPILED
+Version 0.1.0
+====================
+
+Portage natif Windows du jeu N64 40 Winks, fait avec N64: Recompiled et RT64.
+Il ne contient AUCUNE donnée du jeu : il faut ta propre copie du jeu.
+Page du projet : https://github.com/DreaXer/40WinksRecomp
+
+ROM PRISE EN CHARGE
+-------------------
+Uniquement la version finale N64 de Piko Interactive (Europe) :
+  code N4WZ, SHA-1 282b97c6a6eb79535e618fc2651b6156fff65ea4
+
+COMMENT JOUER
+-------------
+1. Lance 40WinksRecompiled.exe.
+2. Choisis ta ROM de 40 Winks quand c'est demandé.
+3. Lance le jeu depuis le launcher.
+Les réglages et les sauvegardes sont dans %LOCALAPPDATA%\40WinksRecompiled\.
+
+Configuration : Windows 10/11 64 bits, une carte graphique Direct3D 12 ou Vulkan 1.2, un processeur avec AVX.
+Si le jeu plante au démarrage, mets à jour les pilotes de ta carte graphique.
+
+ÉTAT ACTUEL
+-----------
+Le monde 1 a été joué en entier sans bug. Les mondes suivants ne sont pas encore testés.
+Garde une copie de tes sauvegardes.
+
+PROBLÈMES CONNUS
+----------------
+* Seul le monde 1 est entièrement testé.
+* Les fondus (transitions) restent à 25 images par seconde.
+* Certaines options du launcher sont grisées (volume, certaines options graphiques, mods).
+
+SIGNALER UN BUG
+---------------
+https://github.com/DreaXer/40WinksRecomp/issues
+Indique : la version, ta version de Windows, l'endroit, ce que tu faisais juste avant, ce qui s'est passé (capture si
+possible), tes réglages Framerate et Aspect Ratio, et pour un plantage le fichier 40winks-log.txt à côté de l'exécutable.
+
+LICENCE
+-------
+GPL-3.0 (voir LICENSE). 40 Winks appartient à ses ayants droit ; ce projet n'a aucun lien avec eux.
