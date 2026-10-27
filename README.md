@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="icon.png" alt="40 Winks : Dreamcompiled" width="256">
+</p>
+
 # 40 Winks : Dreamcompiled
 
 40 Winks : Dreamcompiled is a native PC port of the Nintendo 64 game **40 Winks**, made by **statically recompiling** the
