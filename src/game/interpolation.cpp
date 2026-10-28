@@ -5,6 +5,7 @@
 // winks_mtx_group_pop right after it writes the G_POPMTX (both append to the display list cursor D_801D06C0).
 #include <cstdint>
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <vector>
@@ -176,13 +177,21 @@ extern "C" void winks_sprites_frame_end(uint8_t* rdram) {
 // - level billboards (func_80026164, rotated to face the camera by func_80024E8C): id = their index, whole function.
 // The high byte tags each kind, so an object pointer used by two kinds (or by a 3D object group) never shares an id.
 // A per-call id is set by a hook before the jal (winks_particles_id): the recompiled code does not keep $ra.
-// The translucent world triangles of func_8001732C copy static level vertices (D_801C8B20): no group needed.
+// - translucent level triangles (func_8001732C: waterfalls...): static vertices (D_801C8B20) but scrolling textures, drawn
+//   one triangle per call in depth order. Ungrouped, RT64 paired their tiles with another triangle's of the same texture
+//   (order changes every frame) and the scroll flickered. id = triangle index in D_8012E418, tiles interpolated.
 static uint32_t identity_phys = 0;
 static uint32_t next_id = 0;
+static uint8_t next_tile = G_EX_COMPONENT_SKIP;
 static bool grouped = false;
 
 extern "C" void winks_particles_id(uint32_t id) {
     next_id = id;
+}
+
+extern "C" void winks_scrolling_id(uint32_t id) {
+    next_id = id;
+    next_tile = G_EX_COMPONENT_AUTO;
 }
 
 // Start of the frame's display list (func_80002F20): enable RT64 extensions, set the game's rate, and store an identity
@@ -205,18 +214,22 @@ extern "C" void winks_frame_start(uint8_t* rdram) {
     sprite_frame_start();
 }
 
-extern "C" void winks_particles_group(uint8_t* rdram, uint32_t id) {
+static void particles_group(uint8_t* rdram, uint32_t id, uint8_t tile) {
     // D_80133A7C = free slots left in the last G_VTX load, shared by every call: without a reset, this call would draw with
     // vertices loaded under the previous call's group, and RT64 would compute their motion against another caller's.
     // Zero forces a new G_VTX at the current pool position (halfword, so address ^ 2 in the byteswapped RDRAM).
     *(int16_t*)(rdram + ((0x80133A7C ^ 2) - 0x80000000)) = 0;
     GfxCommand cmds[3];
     gEXMatrixGroup(cmds, id, G_EX_INTERPOLATE_SIMPLE, G_EX_PUSH, 0, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP,
-        G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_INTERPOLATE, G_EX_COMPONENT_SKIP,
+        G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_INTERPOLATE, tile,
         G_EX_ORDER_LINEAR, G_EX_EDIT_NONE, G_EX_ASPECT_AUTO, G_EX_COMPONENT_SKIP, G_EX_COMPONENT_SKIP);
     cmds[2].values.word0 = 0xDA380000;  // G_MTX MODELVIEW | MUL | PUSH
     cmds[2].values.word1 = identity_phys;
     append(rdram, cmds, 3);
+}
+
+extern "C" void winks_particles_group(uint8_t* rdram, uint32_t id) {
+    particles_group(rdram, id, G_EX_COMPONENT_SKIP);
 }
 
 extern "C" void winks_particles_group_end(uint8_t* rdram) {
@@ -227,6 +240,54 @@ extern "C" void winks_particles_group_end(uint8_t* rdram) {
     cmds[0].values.word1 = 0x40;
     gEXPopMatrixGroup(&cmds[1], 0);
     append(rdram, cmds, 2);
+}
+
+// Trails (shout ribbons, candle smoke): func_80012C00 draws slot `offset` (8 bytes each in D_801D21C0) whose node list
+// starts at `head` (next at +0x0, the node's two vertices at +0x4..+0x18, floats). RT64 pairs the vertices by index: when a
+// trail restarts elsewhere (candle leaving the water), a node jumps far and the interpolated frames show a huge stretched
+// triangle. Then the slot gets a new id, so that frame is not interpolated.
+extern "C" void winks_trail_group(uint8_t* rdram, uint32_t offset, uint32_t head) {
+    constexpr int MaxNodes = 64;
+    constexpr float MaxJump = 200.0f;
+    static float prev[32][MaxNodes * 6];
+    static int prev_count[32];
+    static uint32_t generation[32];
+    const uint32_t slot = ((offset - 8) / 8) & 31;
+    float cur[MaxNodes * 6];
+    int count = 0;
+    for (uint32_t node = head; (node != 0) && (count < MaxNodes); count++) {
+        const uint32_t* words = (const uint32_t*)(rdram + (node - 0x80000000));
+        memcpy(&cur[count * 6], &words[1], 6 * sizeof(float));
+        node = words[0];
+    }
+
+    float max_jump = 0.0f;
+    if (count == prev_count[slot]) {
+        for (int i = 0; i < count * 6; i++) {
+            max_jump = std::max(max_jump, std::abs(cur[i] - prev[slot][i]));
+        }
+    }
+
+    if (max_jump > MaxJump) {
+        generation[slot]++;
+    }
+
+    memcpy(prev[slot], cur, count * 6 * sizeof(float));
+    prev_count[slot] = count;
+    winks_particles_group(rdram, 0x54000000 | ((generation[slot] & 0x7FFF) << 9) | (offset & 0x1FF));
+}
+
+// func_80012C48 writes the trail's vertices to the shared pool (write pointer D_801335B8) but loads them 32 at a time
+// (func_80024794), so the load also takes the vertices the next object writes after the trail. When the trail grows by a
+// node, its new last segment uses 2 vertices that were the next object's last frame: RT64 interpolates them from there,
+// hence big white triangles (candle smoke leaving the water). Copy the last vertex pair after the trail and skip it, so
+// those 2 slots hold the trail's tail last frame too.
+// shortcut: takes 32 more bytes of the pool per drawn trail, fine unless the pool is nearly full.
+extern "C" void winks_trail_pad(uint8_t* rdram) {
+    uint32_t* write_ptr = (uint32_t*)(rdram + (0x801335B8 - 0x80000000));
+    uint8_t* end = rdram + (*write_ptr & 0x1FFFFFFF);
+    memcpy(end, end - 0x20, 0x20);
+    *write_ptr += 0x20;
 }
 
 // 1P HUD on the screen edges in Expand mode (subject I). func_800079D0 draws 11 counters (loop index $s1), each at
@@ -325,9 +386,10 @@ extern "C" void winks_hud2p_end(uint8_t* rdram) {
 extern "C" void winks_particles_begin(uint8_t* rdram) {
     grouped = next_id != 0;
     if (grouped) {
-        winks_particles_group(rdram, next_id);
+        particles_group(rdram, next_id, next_tile);
     }
     next_id = 0;
+    next_tile = G_EX_COMPONENT_SKIP;
 }
 
 extern "C" void winks_particles_end(uint8_t* rdram) {
