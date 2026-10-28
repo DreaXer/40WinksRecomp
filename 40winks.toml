@@ -168,6 +168,19 @@ func = "func_80026164"
 text = "{ extern void winks_particles_group_end(uint8_t*); winks_particles_group_end(rdram); }"
 before_vram = 0x80026D10
 
+# Trails (boy's shout ribbons, candle smoke): func_80012C00 draws each non-null slot of D_801D21C0 (32 x 8 bytes) with
+# func_80012C48 (linked list of nodes, 2 world vertices per node, strip by func_80024794). One group per call,
+# id = 0x54 tag | slot offset ($s0, already advanced by 8). func_80012C48 has no other caller: the group ends at its epilogue.
+[[patches.hook]]
+func = "func_80012C00"
+text = "{ extern void winks_particles_group(uint8_t*, uint32_t); winks_particles_group(rdram, 0x54000000 | ((uint32_t)ctx->r16 & 0xFFFFFF)); }"
+before_vram = 0x80012C24
+
+[[patches.hook]]
+func = "func_80012C48"
+text = "{ extern void winks_particles_group_end(uint8_t*); winks_particles_group_end(rdram); }"
+before_vram = 0x80012EFC
+
 # func_80002320 times a frame by spinning on a counter (D_801CD0C0) that another thread increments.
 # On N64 the VI interrupt preempts the loop; ultramodern only switches threads on OS calls, so yield inside both loops.
 [[patches.hook]]
