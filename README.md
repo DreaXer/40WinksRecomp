@@ -12,7 +12,7 @@ to render the game, with enhancements such as high framerates and widescreen.
 
 ### **This repository and its releases do not contain game assets. You need your own copy of the original game to play or build this project.**
 
-> **Version 0.1.0 is an early release.** The whole of World 1 has been played from start to finish without bugs.
+> **Version 0.1.1 is an early release.** The whole of World 1 has been played from start to finish without bugs.
 > Later worlds have not been tested yet: expect problems there, and keep a backup of your saves.
 
 ## Supported ROM
@@ -36,7 +36,7 @@ If the game crashes on startup, update your graphics drivers first.
 
 ## How to play
 
-1. Download `40WinksRecompiled-v0.1.0-windows.zip` from the [releases](https://github.com/DreaXer/40WinksRecomp/releases)
+1. Download `40WinksRecompiled-v0.1.1-windows.zip` from the [releases](https://github.com/DreaXer/40WinksRecomp/releases)
    and extract it anywhere.
 2. Run `40WinksRecompiled.exe`.
 3. Select your 40 Winks ROM when asked. It is copied to `%LOCALAPPDATA%\40WinksRecompiled\`.
@@ -69,7 +69,7 @@ Settings, controller mappings and saves are stored in `%LOCALAPPDATA%\40WinksRec
 
 Open an [issue](https://github.com/DreaXer/40WinksRecomp/issues) with:
 
-- the version (for example 0.1.0) and your Windows version;
+- the version (for example 0.1.1) and your Windows version;
 - where it happened (world, level, area) and what you did just before;
 - what happened (freeze, crash, black textures, wrong sound…), with a screenshot if possible;
 - your graphics settings (Framerate, Aspect Ratio);

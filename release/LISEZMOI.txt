@@ -1,5 +1,5 @@
 40 WINKS : DREAMCOMPILED
-Version 0.1.0
+Version 0.1.1
 ========================
 
 Portage natif Windows du jeu N64 40 Winks, fait avec N64: Recompiled et RT64.
