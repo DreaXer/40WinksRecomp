@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <unordered_map>
 #include <vector>
 
 #define F3DEX_GBI_2
@@ -25,7 +26,58 @@ static void append(uint8_t* rdram, const GfxCommand* cmds, int count) {
     *cursor += count * 8;
 }
 
+// Some objects wrap their angle: the "propellers" (blades on a horizontal axis, angle at data + 0x6) go from -0x2C0 to
+// 0x300 and jump back to -0x2C0, about 100 degrees in one frame. The model looks the same before and after, but RT64
+// interpolated the jump backwards. When an object's rotation moves more than MaxTurn in one frame, its id changes
+// (generation in bits 24..29), so that frame is not interpolated.
+static uint32_t object_id(uint8_t* rdram, uint32_t id) {
+    constexpr float MaxTurnCos = 0.5f; // 60 degrees
+    struct State {
+        float rows[9];
+        uint32_t generation;
+    };
+    static std::unordered_map<uint32_t, State> states;
+    if (id == 0x801CD530) { // func_80000450: not an object, no matrix at id + 0x10
+        return id;
+    }
+
+    const uint32_t parity = *(uint32_t*)(rdram + (0x8012F36C - 0x80000000));
+    const uint32_t mtx = id + 0x10 + parity * 0x40;
+    float rows[9];
+    for (int r = 0; r < 3; r++) {
+        float len = 0.0f;
+        for (int c = 0; c < 3; c++) {
+            const uint32_t a = mtx + (r * 4 + c) * 2;
+            const uint16_t i = *(uint16_t*)(rdram + ((a ^ 2) - 0x80000000));
+            const uint16_t f = *(uint16_t*)(rdram + (((a + 0x20) ^ 2) - 0x80000000));
+            rows[r * 3 + c] = (float)(int32_t)((uint32_t)i << 16 | f) / 65536.0f;
+            len += rows[r * 3 + c] * rows[r * 3 + c];
+        }
+        len = std::sqrt(len);
+        for (int c = 0; c < 3; c++) {
+            rows[r * 3 + c] = (len > 0.0f) ? rows[r * 3 + c] / len : 0.0f;
+        }
+    }
+
+    auto it = states.find(id);
+    if (it == states.end()) {
+        it = states.emplace(id, State{}).first;
+    }
+    else {
+        float trace = 0.0f;
+        for (int i = 0; i < 9; i++) {
+            trace += rows[i] * it->second.rows[i];
+        }
+        if ((trace - 1.0f) * 0.5f < MaxTurnCos) {
+            it->second.generation++;
+        }
+    }
+    memcpy(it->second.rows, rows, sizeof(rows));
+    return (id & 0xC0FFFFFF) | ((it->second.generation & 0x3F) << 24);
+}
+
 extern "C" void winks_mtx_group(uint8_t* rdram, uint32_t id) {
+    id = object_id(rdram, id);
     GfxCommand cmds[2];
     // Vertices are interpolated too: animated characters are skinned on the CPU (per-frame vertex buffers, one matrix).
     gEXMatrixGroup(cmds, id, G_EX_INTERPOLATE_DECOMPOSE, G_EX_PUSH, 0, G_EX_COMPONENT_INTERPOLATE,
