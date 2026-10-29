@@ -1,5 +1,5 @@
 40 WINKS : DREAMCOMPILED
-Version 0.1.1
+Version 0.2.0
 ========================
 
 A native Windows port of the N64 game 40 Winks, made with N64: Recompiled and RT64.
@@ -23,12 +23,12 @@ If the game crashes on startup, update your graphics drivers.
 
 CURRENT STATE
 -------------
-World 1 has been played from start to finish without bugs. Later worlds are not tested yet.
+Worlds 1 and 2 (with its boss) have been played from start to finish without bugs. Later worlds are not tested yet.
 Keep a backup of your saves.
 
 KNOWN ISSUES
 ------------
-* Only World 1 is fully tested.
+* Only Worlds 1 and 2 are fully tested.
 * Screen fades stay at 25 frames per second.
 * Some launcher options are greyed out (sound volume, some graphics options, mods).
 

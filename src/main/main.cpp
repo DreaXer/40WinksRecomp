@@ -68,7 +68,7 @@ namespace RT64 {
     extern std::atomic<bool> filmGrainEnabled;
 }
 
-const std::string version_string = "0.1.1";
+const std::string version_string = "0.2.0";
 
 template<typename... Ts>
 void exit_error(const char* str, Ts ...args) {

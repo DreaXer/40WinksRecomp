@@ -27,11 +27,12 @@ static void append(uint8_t* rdram, const GfxCommand* cmds, int count) {
 }
 
 // Some objects wrap their angle: the "propellers" (blades on a horizontal axis, angle at data + 0x6) go from -0x2C0 to
-// 0x300 and jump back to -0x2C0, about 100 degrees in one frame. The model looks the same before and after, but RT64
+// 0x300 and jump back to -0x2C0, about 130 degrees in one frame. The model looks the same before and after, but RT64
 // interpolated the jump backwards. When an object's rotation moves more than MaxTurn in one frame, its id changes
-// (generation in bits 24..29), so that frame is not interpolated.
+// (generation in bits 24..29), so that frame is not interpolated. The ninja's fireballs spin 87-88 degrees per frame:
+// MaxTurn stays above that.
 static uint32_t object_id(uint8_t* rdram, uint32_t id) {
-    constexpr float MaxTurnCos = 0.5f; // 60 degrees
+    constexpr float MaxTurnCos = 0.0f; // 90 degrees
     struct State {
         float rows[9];
         uint32_t generation;
