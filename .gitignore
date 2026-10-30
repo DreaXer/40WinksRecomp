@@ -37,3 +37,4 @@ rt64.log
 
 # Local copies of lib/ kept while switching to submodules
 lib_local/
+extracted/

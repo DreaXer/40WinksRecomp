@@ -1,6 +1,323 @@
-
 /*
   In order for rml to parse the base style sheet and combine with this one, any style needs to at least be present.
   If you add styles to this file later, you can clear the current contents of this file.
 */
 .rml-needs-something-in-this-file {}
+
+/* 40 Winks lettering in the settings (src/main/main.cpp, game_text_rml): 16 swing cycles (+-12 degrees, sine,
+   one full period per animation), each starting at a phase 22.5 degrees further, so letters can swing out of step
+   without animation delays (RmlUi clamps animation steps to 0.1 s and loses negative delays). */
+@keyframes winks-swing-0 {
+    0% { transform: rotate(0.00deg); }
+    6.25% { transform: rotate(4.59deg); }
+    12.5% { transform: rotate(8.49deg); }
+    18.75% { transform: rotate(11.09deg); }
+    25% { transform: rotate(12.00deg); }
+    31.25% { transform: rotate(11.09deg); }
+    37.5% { transform: rotate(8.49deg); }
+    43.75% { transform: rotate(4.59deg); }
+    50% { transform: rotate(0.00deg); }
+    56.25% { transform: rotate(-4.59deg); }
+    62.5% { transform: rotate(-8.49deg); }
+    68.75% { transform: rotate(-11.09deg); }
+    75% { transform: rotate(-12.00deg); }
+    81.25% { transform: rotate(-11.09deg); }
+    87.5% { transform: rotate(-8.49deg); }
+    93.75% { transform: rotate(-4.59deg); }
+    100% { transform: rotate(-0.00deg); }
+}
+@keyframes winks-swing-1 {
+    0% { transform: rotate(4.59deg); }
+    6.25% { transform: rotate(8.49deg); }
+    12.5% { transform: rotate(11.09deg); }
+    18.75% { transform: rotate(12.00deg); }
+    25% { transform: rotate(11.09deg); }
+    31.25% { transform: rotate(8.49deg); }
+    37.5% { transform: rotate(4.59deg); }
+    43.75% { transform: rotate(0.00deg); }
+    50% { transform: rotate(-4.59deg); }
+    56.25% { transform: rotate(-8.49deg); }
+    62.5% { transform: rotate(-11.09deg); }
+    68.75% { transform: rotate(-12.00deg); }
+    75% { transform: rotate(-11.09deg); }
+    81.25% { transform: rotate(-8.49deg); }
+    87.5% { transform: rotate(-4.59deg); }
+    93.75% { transform: rotate(-0.00deg); }
+    100% { transform: rotate(4.59deg); }
+}
+@keyframes winks-swing-2 {
+    0% { transform: rotate(8.49deg); }
+    6.25% { transform: rotate(11.09deg); }
+    12.5% { transform: rotate(12.00deg); }
+    18.75% { transform: rotate(11.09deg); }
+    25% { transform: rotate(8.49deg); }
+    31.25% { transform: rotate(4.59deg); }
+    37.5% { transform: rotate(0.00deg); }
+    43.75% { transform: rotate(-4.59deg); }
+    50% { transform: rotate(-8.49deg); }
+    56.25% { transform: rotate(-11.09deg); }
+    62.5% { transform: rotate(-12.00deg); }
+    68.75% { transform: rotate(-11.09deg); }
+    75% { transform: rotate(-8.49deg); }
+    81.25% { transform: rotate(-4.59deg); }
+    87.5% { transform: rotate(-0.00deg); }
+    93.75% { transform: rotate(4.59deg); }
+    100% { transform: rotate(8.49deg); }
+}
+@keyframes winks-swing-3 {
+    0% { transform: rotate(11.09deg); }
+    6.25% { transform: rotate(12.00deg); }
+    12.5% { transform: rotate(11.09deg); }
+    18.75% { transform: rotate(8.49deg); }
+    25% { transform: rotate(4.59deg); }
+    31.25% { transform: rotate(0.00deg); }
+    37.5% { transform: rotate(-4.59deg); }
+    43.75% { transform: rotate(-8.49deg); }
+    50% { transform: rotate(-11.09deg); }
+    56.25% { transform: rotate(-12.00deg); }
+    62.5% { transform: rotate(-11.09deg); }
+    68.75% { transform: rotate(-8.49deg); }
+    75% { transform: rotate(-4.59deg); }
+    81.25% { transform: rotate(-0.00deg); }
+    87.5% { transform: rotate(4.59deg); }
+    93.75% { transform: rotate(8.49deg); }
+    100% { transform: rotate(11.09deg); }
+}
+@keyframes winks-swing-4 {
+    0% { transform: rotate(12.00deg); }
+    6.25% { transform: rotate(11.09deg); }
+    12.5% { transform: rotate(8.49deg); }
+    18.75% { transform: rotate(4.59deg); }
+    25% { transform: rotate(0.00deg); }
+    31.25% { transform: rotate(-4.59deg); }
+    37.5% { transform: rotate(-8.49deg); }
+    43.75% { transform: rotate(-11.09deg); }
+    50% { transform: rotate(-12.00deg); }
+    56.25% { transform: rotate(-11.09deg); }
+    62.5% { transform: rotate(-8.49deg); }
+    68.75% { transform: rotate(-4.59deg); }
+    75% { transform: rotate(-0.00deg); }
+    81.25% { transform: rotate(4.59deg); }
+    87.5% { transform: rotate(8.49deg); }
+    93.75% { transform: rotate(11.09deg); }
+    100% { transform: rotate(12.00deg); }
+}
+@keyframes winks-swing-5 {
+    0% { transform: rotate(11.09deg); }
+    6.25% { transform: rotate(8.49deg); }
+    12.5% { transform: rotate(4.59deg); }
+    18.75% { transform: rotate(0.00deg); }
+    25% { transform: rotate(-4.59deg); }
+    31.25% { transform: rotate(-8.49deg); }
+    37.5% { transform: rotate(-11.09deg); }
+    43.75% { transform: rotate(-12.00deg); }
+    50% { transform: rotate(-11.09deg); }
+    56.25% { transform: rotate(-8.49deg); }
+    62.5% { transform: rotate(-4.59deg); }
+    68.75% { transform: rotate(-0.00deg); }
+    75% { transform: rotate(4.59deg); }
+    81.25% { transform: rotate(8.49deg); }
+    87.5% { transform: rotate(11.09deg); }
+    93.75% { transform: rotate(12.00deg); }
+    100% { transform: rotate(11.09deg); }
+}
+@keyframes winks-swing-6 {
+    0% { transform: rotate(8.49deg); }
+    6.25% { transform: rotate(4.59deg); }
+    12.5% { transform: rotate(0.00deg); }
+    18.75% { transform: rotate(-4.59deg); }
+    25% { transform: rotate(-8.49deg); }
+    31.25% { transform: rotate(-11.09deg); }
+    37.5% { transform: rotate(-12.00deg); }
+    43.75% { transform: rotate(-11.09deg); }
+    50% { transform: rotate(-8.49deg); }
+    56.25% { transform: rotate(-4.59deg); }
+    62.5% { transform: rotate(-0.00deg); }
+    68.75% { transform: rotate(4.59deg); }
+    75% { transform: rotate(8.49deg); }
+    81.25% { transform: rotate(11.09deg); }
+    87.5% { transform: rotate(12.00deg); }
+    93.75% { transform: rotate(11.09deg); }
+    100% { transform: rotate(8.49deg); }
+}
+@keyframes winks-swing-7 {
+    0% { transform: rotate(4.59deg); }
+    6.25% { transform: rotate(0.00deg); }
+    12.5% { transform: rotate(-4.59deg); }
+    18.75% { transform: rotate(-8.49deg); }
+    25% { transform: rotate(-11.09deg); }
+    31.25% { transform: rotate(-12.00deg); }
+    37.5% { transform: rotate(-11.09deg); }
+    43.75% { transform: rotate(-8.49deg); }
+    50% { transform: rotate(-4.59deg); }
+    56.25% { transform: rotate(-0.00deg); }
+    62.5% { transform: rotate(4.59deg); }
+    68.75% { transform: rotate(8.49deg); }
+    75% { transform: rotate(11.09deg); }
+    81.25% { transform: rotate(12.00deg); }
+    87.5% { transform: rotate(11.09deg); }
+    93.75% { transform: rotate(8.49deg); }
+    100% { transform: rotate(4.59deg); }
+}
+@keyframes winks-swing-8 {
+    0% { transform: rotate(0.00deg); }
+    6.25% { transform: rotate(-4.59deg); }
+    12.5% { transform: rotate(-8.49deg); }
+    18.75% { transform: rotate(-11.09deg); }
+    25% { transform: rotate(-12.00deg); }
+    31.25% { transform: rotate(-11.09deg); }
+    37.5% { transform: rotate(-8.49deg); }
+    43.75% { transform: rotate(-4.59deg); }
+    50% { transform: rotate(-0.00deg); }
+    56.25% { transform: rotate(4.59deg); }
+    62.5% { transform: rotate(8.49deg); }
+    68.75% { transform: rotate(11.09deg); }
+    75% { transform: rotate(12.00deg); }
+    81.25% { transform: rotate(11.09deg); }
+    87.5% { transform: rotate(8.49deg); }
+    93.75% { transform: rotate(4.59deg); }
+    100% { transform: rotate(0.00deg); }
+}
+@keyframes winks-swing-9 {
+    0% { transform: rotate(-4.59deg); }
+    6.25% { transform: rotate(-8.49deg); }
+    12.5% { transform: rotate(-11.09deg); }
+    18.75% { transform: rotate(-12.00deg); }
+    25% { transform: rotate(-11.09deg); }
+    31.25% { transform: rotate(-8.49deg); }
+    37.5% { transform: rotate(-4.59deg); }
+    43.75% { transform: rotate(-0.00deg); }
+    50% { transform: rotate(4.59deg); }
+    56.25% { transform: rotate(8.49deg); }
+    62.5% { transform: rotate(11.09deg); }
+    68.75% { transform: rotate(12.00deg); }
+    75% { transform: rotate(11.09deg); }
+    81.25% { transform: rotate(8.49deg); }
+    87.5% { transform: rotate(4.59deg); }
+    93.75% { transform: rotate(0.00deg); }
+    100% { transform: rotate(-4.59deg); }
+}
+@keyframes winks-swing-10 {
+    0% { transform: rotate(-8.49deg); }
+    6.25% { transform: rotate(-11.09deg); }
+    12.5% { transform: rotate(-12.00deg); }
+    18.75% { transform: rotate(-11.09deg); }
+    25% { transform: rotate(-8.49deg); }
+    31.25% { transform: rotate(-4.59deg); }
+    37.5% { transform: rotate(-0.00deg); }
+    43.75% { transform: rotate(4.59deg); }
+    50% { transform: rotate(8.49deg); }
+    56.25% { transform: rotate(11.09deg); }
+    62.5% { transform: rotate(12.00deg); }
+    68.75% { transform: rotate(11.09deg); }
+    75% { transform: rotate(8.49deg); }
+    81.25% { transform: rotate(4.59deg); }
+    87.5% { transform: rotate(0.00deg); }
+    93.75% { transform: rotate(-4.59deg); }
+    100% { transform: rotate(-8.49deg); }
+}
+@keyframes winks-swing-11 {
+    0% { transform: rotate(-11.09deg); }
+    6.25% { transform: rotate(-12.00deg); }
+    12.5% { transform: rotate(-11.09deg); }
+    18.75% { transform: rotate(-8.49deg); }
+    25% { transform: rotate(-4.59deg); }
+    31.25% { transform: rotate(-0.00deg); }
+    37.5% { transform: rotate(4.59deg); }
+    43.75% { transform: rotate(8.49deg); }
+    50% { transform: rotate(11.09deg); }
+    56.25% { transform: rotate(12.00deg); }
+    62.5% { transform: rotate(11.09deg); }
+    68.75% { transform: rotate(8.49deg); }
+    75% { transform: rotate(4.59deg); }
+    81.25% { transform: rotate(0.00deg); }
+    87.5% { transform: rotate(-4.59deg); }
+    93.75% { transform: rotate(-8.49deg); }
+    100% { transform: rotate(-11.09deg); }
+}
+@keyframes winks-swing-12 {
+    0% { transform: rotate(-12.00deg); }
+    6.25% { transform: rotate(-11.09deg); }
+    12.5% { transform: rotate(-8.49deg); }
+    18.75% { transform: rotate(-4.59deg); }
+    25% { transform: rotate(-0.00deg); }
+    31.25% { transform: rotate(4.59deg); }
+    37.5% { transform: rotate(8.49deg); }
+    43.75% { transform: rotate(11.09deg); }
+    50% { transform: rotate(12.00deg); }
+    56.25% { transform: rotate(11.09deg); }
+    62.5% { transform: rotate(8.49deg); }
+    68.75% { transform: rotate(4.59deg); }
+    75% { transform: rotate(0.00deg); }
+    81.25% { transform: rotate(-4.59deg); }
+    87.5% { transform: rotate(-8.49deg); }
+    93.75% { transform: rotate(-11.09deg); }
+    100% { transform: rotate(-12.00deg); }
+}
+@keyframes winks-swing-13 {
+    0% { transform: rotate(-11.09deg); }
+    6.25% { transform: rotate(-8.49deg); }
+    12.5% { transform: rotate(-4.59deg); }
+    18.75% { transform: rotate(-0.00deg); }
+    25% { transform: rotate(4.59deg); }
+    31.25% { transform: rotate(8.49deg); }
+    37.5% { transform: rotate(11.09deg); }
+    43.75% { transform: rotate(12.00deg); }
+    50% { transform: rotate(11.09deg); }
+    56.25% { transform: rotate(8.49deg); }
+    62.5% { transform: rotate(4.59deg); }
+    68.75% { transform: rotate(0.00deg); }
+    75% { transform: rotate(-4.59deg); }
+    81.25% { transform: rotate(-8.49deg); }
+    87.5% { transform: rotate(-11.09deg); }
+    93.75% { transform: rotate(-12.00deg); }
+    100% { transform: rotate(-11.09deg); }
+}
+@keyframes winks-swing-14 {
+    0% { transform: rotate(-8.49deg); }
+    6.25% { transform: rotate(-4.59deg); }
+    12.5% { transform: rotate(-0.00deg); }
+    18.75% { transform: rotate(4.59deg); }
+    25% { transform: rotate(8.49deg); }
+    31.25% { transform: rotate(11.09deg); }
+    37.5% { transform: rotate(12.00deg); }
+    43.75% { transform: rotate(11.09deg); }
+    50% { transform: rotate(8.49deg); }
+    56.25% { transform: rotate(4.59deg); }
+    62.5% { transform: rotate(0.00deg); }
+    68.75% { transform: rotate(-4.59deg); }
+    75% { transform: rotate(-8.49deg); }
+    81.25% { transform: rotate(-11.09deg); }
+    87.5% { transform: rotate(-12.00deg); }
+    93.75% { transform: rotate(-11.09deg); }
+    100% { transform: rotate(-8.49deg); }
+}
+@keyframes winks-swing-15 {
+    0% { transform: rotate(-4.59deg); }
+    6.25% { transform: rotate(-0.00deg); }
+    12.5% { transform: rotate(4.59deg); }
+    18.75% { transform: rotate(8.49deg); }
+    25% { transform: rotate(11.09deg); }
+    31.25% { transform: rotate(12.00deg); }
+    37.5% { transform: rotate(11.09deg); }
+    43.75% { transform: rotate(8.49deg); }
+    50% { transform: rotate(4.59deg); }
+    56.25% { transform: rotate(0.00deg); }
+    62.5% { transform: rotate(-4.59deg); }
+    68.75% { transform: rotate(-8.49deg); }
+    75% { transform: rotate(-11.09deg); }
+    81.25% { transform: rotate(-12.00deg); }
+    87.5% { transform: rotate(-11.09deg); }
+    93.75% { transform: rotate(-8.49deg); }
+    100% { transform: rotate(-4.59deg); }
+}
+
+/* Slider knob (letter I) in front of the bar, whose image is created after it. */
+.winks-knob {
+    z-index: 1;
+}
+
+/* Selected choice: yellow like the game's menu titles (env color FFFF00). */
+.winks-checked img {
+    image-color: #FFFF00;
+}

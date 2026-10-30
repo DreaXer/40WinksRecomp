@@ -12,6 +12,8 @@
 #include <chrono>
 #include <fstream>
 #include <algorithm>
+#include <map>
+#include <optional>
 #include <cmath>
 #include <tuple>
 #include <atomic>
@@ -57,7 +59,9 @@
 #endif
 
 #include "../src/elements/ui_image.h"
+#include "../src/elements/ui_slider.h"
 #include "icon_bytes.h"
+#include "menu_font.h"
 
 namespace winks {
     void register_overlays();
@@ -374,16 +378,13 @@ void reorder_texture_pack(recomp::mods::ModContext&) {
     recompui::renderer::trigger_texture_pack_update();
 }
 
-// Launcher decor: fixed background, two children fading in at the bottom right, then the logo fading in from above
-// and floating. Sizes are derived from the container size on every update (dp).
+// Launcher decor (the user's fan art): fixed background, two children walking in at the bottom right, then the logo
+// fading in from above and floating. Sizes are derived from the container size on every update (dp).
 namespace {
     struct LauncherDecor {
         recompui::Element *background = nullptr, *child1 = nullptr, *child2 = nullptr, *logo = nullptr;
-        std::chrono::steady_clock::time_point start;
-        bool started = false;
     } decor;
 
-    constexpr float bg_aspect = 1672.0f / 940.0f;
     constexpr float logo_aspect = 1350.0f / 1165.0f;
 
     float fade(float seconds, float begin, float length) {
@@ -391,17 +392,154 @@ namespace {
         return t * t * (3.0f - 2.0f * t);
     }
 
+    // The UI renderer does not read files: the PNG bytes are handed to it under the name used by the element.
+    // Returns the PNG's width and height (read from its IHDR chunk), 0 x 0 if the file is missing.
+    std::pair<int, int> queue_launcher_image(const std::string &path) {
+        static std::map<std::string, std::pair<int, int>> queued;
+        if (auto it = queued.find(path); it != queued.end()) {
+            return it->second;
+        }
+        std::ifstream file(recompui::file::get_program_path() / "assets" / path, std::ios::binary);
+        std::vector<char> bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        std::pair<int, int> size{0, 0};
+        if (bytes.size() < 24) {
+            fprintf(stderr, "Launcher image not found: %s\n", path.c_str());
+        }
+        else {
+            auto be32 = [&](size_t at) { return int((uint8_t)bytes[at] << 24 | (uint8_t)bytes[at + 1] << 16 | (uint8_t)bytes[at + 2] << 8 | (uint8_t)bytes[at + 3]); };
+            size = {be32(16), be32(20)};
+        }
+        recompui::queue_image_from_bytes_file(path, bytes);
+        return queued[path] = size;
+    }
+
+    // Launcher entries written with the game's big orange menu letters, read from the player's ROM at startup
+    // (src/main/menu_font.cpp: the release ships no game data). One Image per letter in a flex row; only A-Z, 0-9 and
+    // '!' exist. Each letter is appended to `letters` with its position in the text (spaces count), for the animation.
+    // Without a ROM the entries keep their text labels.
+    std::map<std::string, std::pair<int, int>> menu_glyph_sizes;
+
+    struct MenuLetter {
+        recompui::Image *img;
+        int index;
+    };
+    recompui::Element *menu_font_word(recompui::Element *parent, std::string_view text, float height, std::vector<MenuLetter> &letters) {
+        auto context = recompui::get_current_context();
+        auto *row = context.create_element<recompui::Element>(parent);
+        row->set_display(recompui::Display::Flex);
+        row->set_align_items(recompui::AlignItems::Center);
+        for (int i = 0; i < (int)text.size(); i++) {
+            std::string name(1, (char)std::toupper((unsigned char)text[i]));
+            auto it = menu_glyph_sizes.find(name);
+            if (it == menu_glyph_sizes.end()) {
+                // Space or missing letter: a gap a third of the height wide.
+                auto *gap = context.create_element<recompui::Element>(row);
+                gap->set_width(height * 0.35f, recompui::Unit::Dp);
+                continue;
+            }
+            auto [w, h] = it->second;
+            auto *img = context.create_element<recompui::Image>(row, "menu_font/" + name);
+            img->set_width(height * w / h, recompui::Unit::Dp);
+            img->set_height(height, recompui::Unit::Dp);
+            // The letters have dark outlines that touch: overlap them slightly like the game's menus.
+            img->set_margin_right(-height * 0.04f, recompui::Unit::Dp);
+            letters.push_back({img, i});
+        }
+        return row;
+    }
+
+    // Loads the letters from the stored ROM once (they are shared by the launcher and the config menu). Returns false
+    // while no ROM is available, or if the letters could not be read.
+    bool menu_glyphs_ready() {
+        static bool tried = false, ready = false;
+        if (tried || !recomp::is_rom_valid(supported_games[0].game_id)) {
+            return ready;
+        }
+        tried = true;
+        auto glyphs = menu_font_load(recomp::get_config_path() / (supported_games[0].game_id + u8".z64"));
+        if (glyphs.size() < 27) {
+            fprintf(stderr, "Menu letters not found in the ROM: menus keep their text labels.\n");
+            return false;
+        }
+        for (auto &[name, glyph] : glyphs) {
+            menu_glyph_sizes[name] = {glyph.width, glyph.height};
+            recompui::queue_image_from_bytes_rgba32("menu_font/" + name, glyph.rgba, glyph.width, glyph.height);
+        }
+        return ready = true;
+    }
+
+    float menu_seconds() {
+        static const auto start = std::chrono::steady_clock::now();
+        return std::chrono::duration<float>(std::chrono::steady_clock::now() - start).count();
+    }
+
+    // Letter animation measured in the game's menus (func_80000F18 arguments, 25 frames/s): every letter swings
+    // +-12 degrees in the screen plane over 32 frames, each with its own phase; the active entry's letters bob +-6 px
+    // (a glyph is 16 px tall) over 16 frames, each letter 1 frame ahead of the previous one; inactive entries are
+    // tinted A0A0A0. `wave` enables the bobbing (launcher entries only); `active_color` tints the active entry (the
+    // game's menu titles, e.g. "OPTIONS", use env color FFFF00).
+    void animate_letters(std::vector<MenuLetter> &letters, float height, bool active, bool wave,
+        recompui::Color active_color = {0xFF, 0xFF, 0xFF, 0xFF}) {
+        constexpr float two_pi = 6.2831853f, swing_period = 32.0f / 25.0f, wave_period = 16.0f / 25.0f;
+        float seconds = menu_seconds();
+        recompui::Color color = active ? active_color : recompui::Color{0xA0, 0xA0, 0xA0, 0xFF};
+        for (auto &l : letters) {
+            // The game's phases look random: spread them with the golden angle.
+            float swing = 12.0f * std::sin(two_pi * seconds / swing_period + l.index * 2.39996f);
+            float dy = active && wave ? -height * 6.0f / 16.0f *
+                std::sin(two_pi * seconds / wave_period + l.index * two_pi / 16.0f) : 0.0f;
+            l.img->set_rotation(swing);
+            l.img->set_translate_2D(0.0f, dy, recompui::Unit::Dp);
+            l.img->set_image_color(color);
+        }
+    }
+
+    // Background: cover the container, centered.
+    void cover_background(recompui::Element *img, recompui::Element *container) {
+        constexpr float bg_aspect = 1672.0f / 940.0f;
+        float ratio = container->get_dp_to_pixel_ratio();
+        float w = container->get_client_width() / ratio;
+        float h = container->get_client_height() / ratio;
+        float bg_w = std::max(w, h * bg_aspect), bg_h = bg_w / bg_aspect;
+        img->set_width(bg_w, recompui::Unit::Dp);
+        img->set_height(bg_h, recompui::Unit::Dp);
+        img->set_left((w - bg_w) / 2.0f, recompui::Unit::Dp);
+        img->set_top((h - bg_h) / 2.0f, recompui::Unit::Dp);
+    }
+
+    struct MenuFontOption {
+        recompui::GameOption *option;
+        std::string_view title;
+        recompui::Element *sparkle = nullptr;
+        std::vector<MenuLetter> letters;
+    };
+    constexpr float menu_letter_height = 64.0f, menu_option_padding = 24.0f, menu_sparkle_size = 56.0f;
+    std::vector<MenuFontOption> menu_font_options;
+    bool menu_font_built = false;
+
+    // Replaces the launcher entries' labels with the game's letters, at launch or once a ROM has been selected. The
+    // first entry is "Start Game" (it only reads "Load ROM" while no ROM is valid).
+    void menu_font_build() {
+        menu_font_built = true;
+        auto context = recompui::get_current_context();
+        for (auto &m : menu_font_options) {
+            m.option->get_label()->set_display(recompui::Display::None);
+            menu_font_word(m.option, m.title, menu_letter_height, m.letters);
+            m.sparkle = context.create_element<recompui::Image>(m.option, "menu_font/sparkle");
+            m.sparkle->set_position(recompui::Position::Absolute);
+            m.sparkle->set_width(menu_sparkle_size, recompui::Unit::Dp);
+            m.sparkle->set_height(menu_sparkle_size, recompui::Unit::Dp);
+            m.sparkle->set_left(menu_option_padding - menu_sparkle_size - 8.0f, recompui::Unit::Dp);
+            m.sparkle->set_top(menu_option_padding + (menu_letter_height - menu_sparkle_size) / 2.0f, recompui::Unit::Dp);
+            m.sparkle->set_opacity(0.0f);
+        }
+    }
+
     void launcher_decor_setup(recompui::LauncherMenu *menu) {
         recompui::Element *container = menu->get_background_container();
         auto context = recompui::get_current_context();
-        // The UI renderer does not read files: the PNG bytes are handed to it under the name used by the element.
         auto make = [&](const char *path) {
-            std::ifstream file(recompui::file::get_program_path() / "assets" / path, std::ios::binary);
-            std::vector<char> bytes((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-            if (bytes.empty()) {
-                fprintf(stderr, "Launcher image not found: %s\n", path);
-            }
-            recompui::queue_image_from_bytes_file(path, bytes);
+            queue_launcher_image(path);
             auto *img = context.create_element<recompui::Image>(container, path);
             img->set_position(recompui::Position::Absolute);
             img->set_opacity(0.0f);
@@ -416,24 +554,12 @@ namespace {
     }
 
     void launcher_decor_update(recompui::LauncherMenu *menu) {
-        auto now = std::chrono::steady_clock::now();
-        if (!decor.started) {
-            decor.start = now;
-            decor.started = true;
-        }
-        float seconds = std::chrono::duration<float>(now - decor.start).count();
-
         recompui::Element *container = menu->get_background_container();
+        cover_background(decor.background, container);
+        float seconds = menu_seconds();
         float ratio = container->get_dp_to_pixel_ratio();
         float w = container->get_client_width() / ratio;
         float h = container->get_client_height() / ratio;
-
-        // Background: cover the container, centered.
-        float bg_w = std::max(w, h * bg_aspect), bg_h = bg_w / bg_aspect;
-        decor.background->set_width(bg_w, recompui::Unit::Dp);
-        decor.background->set_height(bg_h, recompui::Unit::Dp);
-        decor.background->set_left((w - bg_w) / 2.0f, recompui::Unit::Dp);
-        decor.background->set_top((h - bg_h) / 2.0f, recompui::Unit::Dp);
 
         // Children: small, bottom right. child2 is further left, half hidden behind child1.
         float size = h * 0.38f;
@@ -462,10 +588,177 @@ namespace {
         decor.logo->set_left((w - logo_w) / 2.0f, recompui::Unit::Dp);
         decor.logo->set_top(h * 0.03f + offset_y, recompui::Unit::Dp);
         decor.logo->set_opacity(appear);
+
+        // Image letters ignore the option's hover/focus text color: the game's menu sparkle marks the active entry.
+        if (!menu_font_built && menu_glyphs_ready()) {
+            menu_font_build();
+        }
+        for (auto &m : menu_font_options) {
+            if (m.sparkle == nullptr) {
+                continue;
+            }
+            bool active = m.option->is_enabled() &&
+                (m.option->is_style_enabled(recompui::hover_state) || m.option->is_style_enabled(recompui::focus_state));
+            m.sparkle->set_opacity(active ? 0.8f + 0.2f * std::sin(menu_seconds() * 6.0f) : 0.0f);
+            animate_letters(m.letters, menu_letter_height, active, true);
+        }
+    }
+
+    // Settings text (option names, choices, slider values) in the game's letters, as raw RML: one <img> per letter,
+    // sized in em so it follows each label's font size. Variant 1 (option names) swings like the launcher entries
+    // (keyframes `winks-swing-N` in assets/recomp.rcss, one per phase); variants 0 (choices)
+    // and 2 (slider values) keep a fixed tilt. Characters the game font lacks (%, :, -, ., ...) are dropped. Plain text while
+    // no ROM letters are available.
+    std::optional<std::string> game_text_rml(std::string_view text, int variant) {
+        if (!menu_glyphs_ready()) {
+            return std::nullopt;
+        }
+        // Choices (variant 0) are 10 % bigger than names (1) and slider values (2).
+        const float letter_em = variant == 0 ? 1.65f : 1.5f;
+        std::string rml;
+        char style[256];
+        float total_em = 0.1f;
+        for (int i = 0; i < (int)text.size(); i++) {
+            std::string name(1, (char)std::toupper((unsigned char)text[i]));
+            if (name == " ") {
+                rml += "<span style=\"display: inline-block; width: 0.4em;\"></span>";
+                total_em += 0.4f;
+                continue;
+            }
+            auto it = menu_glyph_sizes.find(name);
+            if (it == menu_glyph_sizes.end() || name == "sparkle") {
+                continue;
+            }
+            auto [w, h] = it->second;
+            // No negative margin here (unlike the launcher entries): RmlUi's shrink-to-fit width ignores it and wraps
+            // the last letter of radio buttons.
+            if (variant == 1) {
+                // Same phase as animate_letters: 12 sin(2 pi t / 1.28 + 2.4 i), rounded to the nearest of the 16
+                // phase-shifted cycles `winks-swing-N` of assets/recomp.rcss (no delays: every letter moves at once).
+                constexpr float two_pi = 6.2831853f, period = 32.0f / 25.0f;
+                int cycle = (int)std::lround(std::fmod(i * 2.39996f, two_pi) / two_pi * 16.0f) % 16;
+                snprintf(style, sizeof(style), "height: %.2fem; width: %.2fem; animation: %.2fs linear infinite winks-swing-%d;",
+                    letter_em, letter_em * w / h, period, cycle);
+            }
+            else {
+                snprintf(style, sizeof(style), "height: %.2fem; width: %.2fem; transform: rotate(%.1fdeg);",
+                    letter_em, letter_em * w / h, 8.0f * std::sin(i * 2.39996f));
+            }
+            rml += "<img src=\"menu_font/" + name + "\" style=\"" + style + "\"/>";
+            total_em += letter_em * w / h;
+        }
+        // One block of explicit width: RmlUi's shrink-to-fit underestimates a run of inline images by about one letter
+        // and wraps the last one (radio buttons, long names).
+        snprintf(style, sizeof(style), "display: inline-block; white-space: nowrap; width: %.2fem;", total_em);
+        return std::string("<span style=\"") + style + "\">" + rml + "</span>";
+    }
+
+    // Config menu (General, Graphics, ...): the launcher background behind the panel, and the tab headers written
+    // with the game's letters, swinging, dimmed unless selected, hovered or focused, then yellow like the game's menu
+    // titles (no bobbing). Built on the first
+    // frame the menu is shown with the letters available.
+    struct ConfigTabLetters {
+        recompui::Tab *tab;
+        std::vector<MenuLetter> letters;
+    };
+    constexpr float config_letter_height = 48.0f;
+    recompui::Element *config_background = nullptr;
+    std::vector<ConfigTabLetters> config_tabs;
+    bool config_tabs_built = false;
+
+    void config_decor_update(recompui::TabbedModal *modal) {
+        recompui::Element *holder = modal->get_background_holder();
+        if (config_background == nullptr) {
+            queue_launcher_image("icons/background.png");
+            config_background = recompui::get_current_context().create_element<recompui::Image>(holder, "icons/background.png");
+            config_background->set_position(recompui::Position::Absolute);
+        }
+        cover_background(config_background, holder);
+
+        if (!config_tabs_built && menu_glyphs_ready()) {
+            config_tabs_built = true;
+            for (recompui::Tab *tab : modal->get_tab_set()->get_tabs()) {
+                tab->get_label()->set_display(recompui::Display::None);
+                ConfigTabLetters entry{tab, {}};
+                menu_font_word(tab, tab->get_text(), config_letter_height, entry.letters);
+                config_tabs.push_back(std::move(entry));
+            }
+        }
+        for (auto &t : config_tabs) {
+            bool active = t.tab->get_selected() || t.tab->is_style_enabled(recompui::hover_state) ||
+                t.tab->is_style_enabled(recompui::focus_state);
+            animate_letters(t.letters, config_letter_height, active, false, {0xFF, 0xFF, 0x00, 0xFF});
+        }
+    }
+}
+
+// First launch (no valid ROM stored yet): ask for the ROM before the launcher shows, so it opens with the game's
+// letters. A wrong file explains which dump is needed and asks again; Cancel opens the launcher without a ROM
+// ("Load ROM" entry, text labels).
+namespace {
+    constexpr const char *required_dump =
+        "40 Winks (Europe) for Nintendo 64, game code N4WZ\n"
+        "SHA-1 282b97c6a6eb79535e618fc2651b6156fff65ea4\n"
+        "(.z64, .n64 or .v64)";
+
+    bool ask_ok_cancel(SDL_MessageBoxFlags flags, const char *title, const std::string &message) {
+        const SDL_MessageBoxButtonData buttons[] = {
+            { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "OK" },
+            { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Cancel" },
+        };
+        const SDL_MessageBoxData data = { flags, nullptr, title, message.c_str(), SDL_arraysize(buttons), buttons, nullptr };
+        int pressed = 0;
+        return SDL_ShowMessageBox(&data, &pressed) == 0 && pressed == 1;
+    }
+
+    void ask_for_rom_on_first_launch() {
+        const std::u8string &game_id = supported_games[0].game_id;
+        std::string message = std::string("Select your 40 Winks ROM to start.\n"
+            "Choisis ta ROM de 40 Winks pour commencer.\n\nRequired dump / Dump requis :\n") + required_dump;
+        while (!recomp::is_rom_valid(game_id)) {
+            if (!ask_ok_cancel(SDL_MESSAGEBOX_INFORMATION, "40 Winks : Dreamcompiled", message)) {
+                return;
+            }
+            nfdu8filteritem_t filter = { "N64 ROM", "z64,n64,v64" };
+            nfdu8char_t *utf8_path = nullptr;
+            if (NFD_OpenDialogU8(&utf8_path, &filter, 1, nullptr) != NFD_OKAY) {
+                continue;
+            }
+            std::filesystem::path path{reinterpret_cast<const char8_t *>(utf8_path)};
+            NFD_FreePathU8(utf8_path);
+            const char *reason = nullptr;
+            switch (recomp::select_rom(path, game_id)) {
+                case recomp::RomValidationError::Good:
+                    recomp::check_all_stored_roms();
+                    break;
+                case recomp::RomValidationError::FailedToOpen:
+                    reason = "The file could not be opened. / Impossible d'ouvrir le fichier.";
+                    break;
+                case recomp::RomValidationError::NotARom:
+                    reason = "This file is not an N64 ROM. / Ce fichier n'est pas une ROM N64.";
+                    break;
+                case recomp::RomValidationError::IncorrectVersion:
+                    reason = "This is 40 Winks, but not the right version (prototype, other region or modified dump).\n"
+                        "C'est bien 40 Winks, mais pas la bonne version (prototype, autre région ou dump modifié).";
+                    break;
+                default:
+                    reason = "This ROM is not 40 Winks. / Cette ROM n'est pas 40 Winks.";
+                    break;
+            }
+            if (reason != nullptr) {
+                message = std::string(reason) + "\n\nRequired dump / Dump requis :\n" + required_dump +
+                    "\n\nOK: choose another file / choisir un autre fichier.";
+                if (!ask_ok_cancel(SDL_MESSAGEBOX_ERROR, "Wrong ROM / Mauvaise ROM", message)) {
+                    return;
+                }
+                message = std::string("Select your 40 Winks ROM.\nChoisis ta ROM de 40 Winks.\n\nRequired dump / Dump requis :\n") + required_dump;
+            }
+        }
     }
 }
 
 void on_launcher_init(recompui::LauncherMenu *menu) {
+    ask_for_rom_on_first_launch();
     auto game_options_menu = menu->init_game_options_menu(
         supported_games[0].game_id,
         supported_games[0].mod_game_id,
@@ -479,11 +772,18 @@ void on_launcher_init(recompui::LauncherMenu *menu) {
 
     // Same layout as dk64recomp's launcher (options column on the left, big entries, credits bottom right), on a black
     // background for now: no animation, logo or images yet.
-    for (auto option : game_options_menu->get_options()) {
+    // The labels are replaced by the game's menu letters once a ROM is available (menu_font_build); titles in
+    // add_default_options' order.
+    constexpr std::array<std::string_view, 5> option_titles = {"Start Game", "Controls", "Settings", "Mods", "Exit"};
+    auto context = recompui::get_current_context();
+    auto &options = game_options_menu->get_options();
+    assert(options.size() == option_titles.size());
+    for (size_t i = 0; i < options.size(); i++) {
+        auto option = options[i];
         option->set_justify_content(recompui::JustifyContent::FlexStart);
         option->set_border_radius(0);
         option->set_font_family("Suplexmentary Comic NC");
-        option->set_padding(24.0f);
+        option->set_padding(menu_option_padding);
         option->get_label()->set_font_size(56.0f);
         option->get_label()->set_letter_spacing(4.0f);
 
@@ -491,6 +791,14 @@ void on_launcher_init(recompui::LauncherMenu *menu) {
         for (auto style : hover_focus) {
             style->set_background_color(recompui::theme::color::Transparent);
         }
+        // No mod support yet: the Mods entry stays visible but greyed out and unselectable (like its config tab).
+        if (option_titles[i] == "Mods") {
+            option->set_enabled(false);
+        }
+        menu_font_options.push_back({option, option_titles[i]});
+    }
+    if (menu_glyphs_ready()) {
+        menu_font_build();
     }
 
     constexpr float options_top_offset = 96.0f;
@@ -512,7 +820,6 @@ void on_launcher_init(recompui::LauncherMenu *menu) {
     background_container->set_background_color({ 0, 0, 0, 0xFF });
     launcher_decor_setup(menu);
 
-    auto context = recompui::get_current_context();
     auto credits_label = context.create_element<recompui::Label>(
         background_container,
         "40 Winks Dreamcompiled by DreaXer and Claude Anthropic",
@@ -647,7 +954,8 @@ int main(int argc, char** argv) {
     recompui::config::set_tab_selectable(recompui::config::mods::id, false);
     recompui::config::finalize();
 
-    // Not adapted to 40 Winks yet: only Resolution, Aspect Ratio and HUD Ratio stay editable in Graphics, nothing in Sound.
+    // Not adapted to 40 Winks yet: only Resolution, Aspect Ratio, HUD Ratio, MSAA, Downsampling and High Precision Framebuffer (shown in lib/RecompFrontend) stay editable in Graphics, nothing in Sound.
+    // Downsampling is greyed by RecompFrontend itself at Auto resolution.
     // Aspect Ratio Expand: RT64 widens the projection matrices and keeps 2D rects centered in 4:3, except the 1P HUD,
     // moved to the edges with gEXSetRectAlign (src/game/interpolation.cpp), as far as HUD Ratio allows.
     {
@@ -655,8 +963,7 @@ int main(int argc, char** argv) {
         auto& graphics_config = get_graphics_config();
         for (const auto& id : {
                 graphics::options::developer_mode,
-                graphics::options::api_option, graphics::options::msaa_option,
-                graphics::options::hpfb_option, graphics::options::ds_option }) {
+                graphics::options::api_option }) {
             if (graphics_config.has_option(id)) {
                 graphics_config.update_option_disabled(id, true);
             }
@@ -666,6 +973,20 @@ int main(int argc, char** argv) {
 
     recompui::register_launcher_init_callback(on_launcher_init);
     recompui::register_launcher_update_callback(launcher_decor_update);
+    recompui::config::set_update_callback(config_decor_update);
+    recompui::set_game_text_converter(game_text_rml);
+    // Options sliders like the game's (func_80000F18 trace of the Options menu): the underline sprite as the bar and the
+    // unrotated letter I as the knob. Model sizes from the resource headers: a letter quad is 158 units, the bar
+    // 474 x 38 (3 x 0.24 letters); the knob moves +-24 px around the bar's center (69 % of its 69 px).
+    recompui::set_game_slider_styler([](recompui::Slider *slider) {
+        if (!menu_glyphs_ready()) {
+            return;
+        }
+        constexpr float knob_height = 48.0f;
+        auto [iw, ih] = menu_glyph_sizes["I"];
+        slider->use_game_images("menu_font/underline", "menu_font/I", knob_height * 474.0f / 158.0f,
+            knob_height * 38.0f / 158.0f, knob_height * iw / ih, knob_height, 0.69f);
+    });
 
     recomp::rsp::callbacks_t rsp_callbacks{
         .get_rsp_microcode = get_rsp_microcode,

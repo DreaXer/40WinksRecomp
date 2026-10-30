@@ -90,6 +90,7 @@ set (SOURCES
     ${CMAKE_SOURCE_DIR}/src/main/register_overlays.cpp
     ${CMAKE_SOURCE_DIR}/src/main/trace.cpp
     ${CMAKE_SOURCE_DIR}/src/main/dl_dump.cpp
+    ${CMAKE_SOURCE_DIR}/src/main/menu_font.cpp
     ${CMAKE_SOURCE_DIR}/src/game/pak.cpp
     ${CMAKE_SOURCE_DIR}/src/game/interpolation.cpp
 
@@ -187,6 +188,9 @@ if (WIN32)
 
     # Own target so rc.exe does not get the executable's long include list (it fails with RC1107 otherwise)
     add_library(app_icon OBJECT ${CMAKE_SOURCE_DIR}/icons/app.rc)
+    # Icon 1 (square) is the default; icon 2 (round) can be picked in a shortcut's "Change Icon" dialog.
+    set_source_files_properties(${CMAKE_SOURCE_DIR}/icons/app.rc PROPERTIES
+        OBJECT_DEPENDS "${CMAKE_SOURCE_DIR}/icons/app.ico;${CMAKE_SOURCE_DIR}/icons/app_round.ico")
     target_sources(40WinksRecompiled PRIVATE $<TARGET_OBJECTS:app_icon>)
     target_link_libraries(40WinksRecompiled PRIVATE SDL2 Winmm.lib)
 endif()
