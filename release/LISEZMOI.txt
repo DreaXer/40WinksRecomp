@@ -1,5 +1,5 @@
 40 WINKS : DREAMCOMPILED
-Version 0.2.0
+Version 0.3.0
 ========================
 
 Portage natif Windows du jeu N64 40 Winks, fait avec N64: Recompiled et RT64.
@@ -14,7 +14,8 @@ Uniquement la version finale N64 de Piko Interactive (Europe) :
 COMMENT JOUER
 -------------
 1. Lance 40WinksRecompiled.exe.
-2. Choisis ta ROM de 40 Winks quand c'est demandé.
+2. Choisis ta ROM de 40 Winks quand c'est demandé (premier lancement seulement ; une mauvaise ROM est refusée
+   avec la raison).
 3. Lance le jeu depuis le launcher.
 Les réglages et les sauvegardes sont dans %LOCALAPPDATA%\40WinksRecompiled\.
 
@@ -30,7 +31,7 @@ PROBLÈMES CONNUS
 ----------------
 * Seuls les mondes 1 et 2 sont entièrement testés.
 * Les fondus (transitions) restent à 25 images par seconde.
-* Certaines options du launcher sont grisées (volume, certaines options graphiques, mods).
+* Quelques options du launcher sont grisées (volume principal, API graphique, mods).
 
 SIGNALER UN BUG
 ---------------

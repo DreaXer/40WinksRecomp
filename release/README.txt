@@ -1,5 +1,5 @@
 40 WINKS : DREAMCOMPILED
-Version 0.2.0
+Version 0.3.0
 ========================
 
 A native Windows port of the N64 game 40 Winks, made with N64: Recompiled and RT64.
@@ -14,7 +14,7 @@ Only the final N64 release by Piko Interactive (Europe):
 HOW TO PLAY
 -----------
 1. Run 40WinksRecompiled.exe.
-2. Select your 40 Winks ROM when asked.
+2. Select your 40 Winks ROM when asked (first launch only; a wrong dump is refused with the reason).
 3. Start the game from the launcher.
 Settings and saves are stored in %LOCALAPPDATA%\40WinksRecompiled\.
 
@@ -30,7 +30,7 @@ KNOWN ISSUES
 ------------
 * Only Worlds 1 and 2 are fully tested.
 * Screen fades stay at 25 frames per second.
-* Some launcher options are greyed out (sound volume, some graphics options, mods).
+* A few launcher options are greyed out (main volume, graphics API, mods).
 
 REPORTING A BUG
 ---------------
