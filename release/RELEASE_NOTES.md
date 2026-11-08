@@ -1,6 +1,6 @@
-# 🌙 40 Winks : Dreamcompiled — v0.3.0
+# 🌙 40 Winks : Dreamcompiled — v0.4.0
 
-**A launcher dressed in the game's own letters.** A native Windows port of the Nintendo 64 game, made by statically recompiling its
+**Now on Linux too.** A native Windows and Linux port of the Nintendo 64 game, made by statically recompiling its
 code with [N64: Recompiled](https://github.com/N64Recomp/N64Recomp) and rendered with [RT64](https://github.com/rt64/rt64).
 
 > [!IMPORTANT]
@@ -14,21 +14,14 @@ code with [N64: Recompiled](https://github.com/N64Recomp/N64Recomp) and rendered
 
 > [!WARNING]
 > **Early release.** Worlds 1 and 2 (with its boss) have been played from start to finish without bugs; later worlds
-> have not been tested yet. Keep a backup of your saves: `%LOCALAPPDATA%\40WinksRecompiled\saves`.
+> have not been tested yet. Keep a backup of your saves: `%LOCALAPPDATA%\40WinksRecompiled\saves`
+> (Windows) or `~/.config/40WinksRecompiled/saves` (Linux).
 
-## 🆕 What's new since v0.2.0
+## 🆕 What's new since v0.3.0
 
-- **Game-styled launcher**: the menu entries are written with the game's big orange menu letters, with the game's
-  animations (letters swinging, wave on the selected entry, other entries dimmed) and its sparkle cursor.
-- **Game-styled settings**: your launcher background behind the window; tabs, option names and choices in the game's
-  letters (selected choice in yellow, like the game's menu titles); sliders made of the game's own slider pieces.
-- These letters are **read from your ROM** at startup: the release still contains no game data. Without a ROM the
-  launcher keeps its plain text.
-- **First launch**: a window asks for your ROM, checks it, and tells you which dump is needed if it is the wrong one.
-- **New graphics options**: MSAA, downsampling, high precision framebuffer, texture filtering, output filter and 2D
-  upscale.
-- **New icons**: a candle, square by default; a round one can be picked in a shortcut's *Change Icon* dialog.
-- The *Mods* entry is visible but disabled for now (no mod support yet).
+- **Linux build** (x86-64, Vulkan): `40WinksRecompiled-v0.4.0-linux.tar.gz`, with the same features as Windows,
+  including the game-styled launcher. Tested on Ubuntu with X11 and an NVIDIA GPU.
+- Linux settings, ROM and saves are stored in `~/.config/40WinksRecompiled/`.
 
 ## ✨ Features
 
@@ -44,11 +37,15 @@ code with [N64: Recompiled](https://github.com/N64Recomp/N64Recomp) and rendered
 
 ## 📦 Install
 
-1. Download **`40WinksRecompiled-v0.3.0-windows.zip`** below and extract it anywhere.
-2. Run **`40WinksRecompiled.exe`** and select your ROM when asked.
-3. Start the game from the launcher.
+1. Download **`40WinksRecompiled-v0.4.0-windows.zip`** or **`40WinksRecompiled-v0.4.0-linux.tar.gz`** below and
+   extract it anywhere.
+2. Windows: run **`40WinksRecompiled.exe`**. Linux: open a terminal in the extracted folder and run
+   **`./40WinksRecompiled`** (start it from that folder: it needs `assets/`).
+3. Select your ROM when asked, then start the game from the launcher.
 
-**Requirements:** Windows 10/11 (64-bit) · GPU with Direct3D 12 or Vulkan 1.2 · CPU with AVX.
+**Requirements:** Windows 10/11 (64-bit) or Linux x86-64 · GPU with Direct3D 12 or Vulkan 1.2 (Vulkan on Linux) ·
+CPU with AVX. Linux also needs SDL2, GTK 3, FreeType, libcurl and the Vulkan loader; on Ubuntu / Debian:
+`sudo apt install libsdl2-2.0-0 libgtk-3-0 libfreetype6 libcurl4 libvulkan1`.
 If the game crashes on startup, update your graphics drivers first.
 
 ## 🐛 Known issues
@@ -61,30 +58,29 @@ If the game crashes on startup, update your graphics drivers first.
 
 Open an [issue](https://github.com/DreaXer/40WinksRecomp/issues) with:
 
-- the version (`0.3.0`) and your Windows version;
+- the version (`0.4.0`) and your Windows version or Linux distribution;
 - where it happened and what you did just before;
 - what happened, with a screenshot if possible;
 - your **Framerate** and **Aspect Ratio** settings;
-- for a crash, the `40winks-log.txt` file next to the executable.
+- for a crash, the `40winks-log.txt` file next to the executable (on Linux, in the folder you started it from).
 
 <details>
 <summary>🇫🇷 <b>En français</b></summary>
 
 <br>
 
-Version 0.3.0 de **40 Winks : Dreamcompiled**, portage natif Windows du jeu N64, fait avec N64: Recompiled et RT64.
+Version 0.4.0 de **40 Winks : Dreamcompiled**, portage natif Windows et Linux du jeu N64, fait avec N64: Recompiled et RT64.
 
-- **Nouveau** : launcher et réglages aux couleurs du jeu (lettres des menus du jeu animées, onglets, noms et choix
-  des réglages, sliders du jeu), lus dans ta ROM au lancement (aucune donnée du jeu livrée) ; au premier lancement, une
-  fenêtre demande la ROM, la vérifie et indique le bon dump ; nouvelles options graphiques (MSAA, downsampling,
-  framebuffer haute précision, filtrage des textures, filtre de sortie, mise à l'échelle 2D) ; nouvelles icônes
-  (bougie carrée, ronde au choix) ; entrée *Mods* désactivée pour l'instant.
+- **Nouveau** : version Linux (x86-64, Vulkan), avec les mêmes fonctions que sous Windows, launcher aux couleurs du
+  jeu compris. Testée sous Ubuntu (X11, carte NVIDIA). Réglages, ROM et sauvegardes dans `~/.config/40WinksRecompiled/`.
 
 - **Il faut ta propre copie du jeu** : version finale N64 de Piko Interactive (Europe), code `N4WZ`,
   SHA-1 `282b97c6a6eb79535e618fc2651b6156fff65ea4`. Cette release ne contient aucune donnée du jeu.
 - **Version de test** : les mondes 1 et 2 ont été joués en entier sans bug ; la suite n'est pas encore testée. Garde une copie
-  de tes sauvegardes (`%LOCALAPPDATA%\40WinksRecompiled\saves`).
-- **Installation** : extraire le zip, lancer `40WinksRecompiled.exe`, choisir la ROM quand c'est demandé.
+  de tes sauvegardes (`%LOCALAPPDATA%\40WinksRecompiled\saves` ou `~/.config/40WinksRecompiled/saves`).
+- **Installation** : extraire le zip (Windows) ou le tar.gz (Linux), lancer `40WinksRecompiled.exe` ou, sous Linux,
+  `./40WinksRecompiled` depuis le dossier extrait, puis choisir la ROM quand c'est demandé. Linux demande aussi
+  `sudo apt install libsdl2-2.0-0 libgtk-3-0 libfreetype6 libcurl4 libvulkan1` (Ubuntu / Debian).
 - **Bugs** : ouvre une [issue](https://github.com/DreaXer/40WinksRecomp/issues) (version, endroit, ce que tu
   faisais, capture, réglages Framerate / Aspect Ratio, et `40winks-log.txt` pour un plantage).
 

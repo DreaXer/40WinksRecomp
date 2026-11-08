@@ -12,7 +12,7 @@ to render the game, with enhancements such as high framerates and widescreen.
 
 ### **This repository and its releases do not contain game assets. You need your own copy of the original game to play or build this project.**
 
-> **Version 0.3.0 is an early release.** Worlds 1 and 2 (with its boss) have been played from start to finish without
+> **Version 0.4.0 is an early release.** Worlds 1 and 2 (with its boss) have been played from start to finish without
 > bugs. Later worlds have not been tested yet: expect problems there, and keep a backup of your saves.
 
 ## Supported ROM
@@ -28,22 +28,26 @@ The earlier prototype (`N4WX`) is not supported.
 
 ## System requirements
 
-- Windows 10 or 11, 64-bit. (No Linux or macOS build yet.)
-- A GPU supporting Direct3D 12.0 (Shader Model 6) or Vulkan 1.2.
+- Windows 10 or 11, 64-bit, or Linux x86-64 (tested on Ubuntu with X11). No macOS build yet.
+- A GPU supporting Direct3D 12.0 (Shader Model 6) or Vulkan 1.2 (Vulkan only on Linux).
 - A CPU supporting AVX.
+- Linux: SDL2, GTK 3, FreeType, libcurl and the Vulkan loader. On Ubuntu / Debian:
+  `sudo apt install libsdl2-2.0-0 libgtk-3-0 libfreetype6 libcurl4 libvulkan1`.
 
 If the game crashes on startup, update your graphics drivers first.
 
 ## How to play
 
-1. Download `40WinksRecompiled-v0.3.0-windows.zip` from the [releases](https://github.com/DreaXer/40WinksRecomp/releases)
-   and extract it anywhere.
-2. Run `40WinksRecompiled.exe`.
+1. Download `40WinksRecompiled-v0.4.0-windows.zip` or `40WinksRecompiled-v0.4.0-linux.tar.gz` from the
+   [releases](https://github.com/DreaXer/40WinksRecomp/releases) and extract it anywhere.
+2. Run `40WinksRecompiled.exe` (Windows), or on Linux open a terminal in the extracted folder and run
+   `./40WinksRecompiled` (it must be started from that folder, which holds `assets/`).
 3. On first launch, a window asks for your 40 Winks ROM. It is checked (a wrong dump is refused with the reason) and
-   copied to `%LOCALAPPDATA%\40WinksRecompiled\`.
+   copied to the settings folder below.
 4. Start the game from the launcher.
 
-Settings, controller mappings and saves are stored in `%LOCALAPPDATA%\40WinksRecompiled\`.
+Settings, controller mappings, the ROM and saves are stored in `%LOCALAPPDATA%\40WinksRecompiled\` (Windows) or
+`~/.config/40WinksRecompiled/` (Linux).
 
 ## Features
 
@@ -72,15 +76,16 @@ Settings, controller mappings and saves are stored in `%LOCALAPPDATA%\40WinksRec
 
 Open an [issue](https://github.com/DreaXer/40WinksRecomp/issues) with:
 
-- the version (for example 0.3.0) and your Windows version;
+- the version (for example 0.4.0) and your operating system (Windows version or Linux distribution);
 - where it happened (world, level, area) and what you did just before;
 - what happened (freeze, crash, black textures, wrong sound…), with a screenshot if possible;
 - your graphics settings (Framerate, Aspect Ratio);
-- for a crash, the `40winks-log.txt` file next to the executable.
+- for a crash, the `40winks-log.txt` file next to the executable (on Linux, in the folder you started it from).
 
 ## Building
 
-Building needs your own ROM: the game's code is disassembled from it, then recompiled. Windows only for now.
+Building needs your own ROM: the game's code is disassembled from it, then recompiled. The disassembly and
+recompilation steps below run on Windows; Linux builds reuse their output (see *Building on Linux*).
 
 Requirements: Visual Studio 2026 (version 18) with the C++ workload and clang-cl, Python 3 with
 [splat](https://github.com/ethteck/splat) (`pip install splat64[mips]`), and MSYS2 with `mingw-w64-x86_64-clang` and
@@ -104,6 +109,17 @@ git clone --recursive https://github.com/DreaXer/40WinksRecomp.git
    ./RSPRecomp.exe aspMain.toml
    ```
 5. Run `build.bat`. The executable is written to `build-vs/40WinksRecompiled.exe`.
+
+### Building on Linux
+
+1. Install the build tools (Ubuntu / Debian):
+   ```
+   sudo apt install git build-essential cmake ninja-build clang lld llvm libsdl2-dev libgtk-3-dev libfreetype-dev libvulkan-dev libx11-dev libxrandr-dev libcurl4-openssl-dev
+   ```
+2. Clone with `--recursive`, then copy `RecompiledFuncs/` and `rsp/aspMain.cpp` from a Windows checkout where steps 1
+   to 4 above were done.
+3. Run `./build-linux.sh`. The executable is written to `build-linux/40WinksRecompiled`; run it from the repository
+   root. `./build-linux.sh package` also writes the release archive to `dist/`.
 
 ## Libraries used and projects referenced
 

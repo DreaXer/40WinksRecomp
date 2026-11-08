@@ -1,8 +1,8 @@
 40 WINKS : DREAMCOMPILED
-Version 0.3.0
+Version 0.4.0
 ========================
 
-Portage natif Windows du jeu N64 40 Winks, fait avec N64: Recompiled et RT64.
+Portage natif Windows et Linux du jeu N64 40 Winks, fait avec N64: Recompiled et RT64.
 Il ne contient AUCUNE donnée du jeu : il faut ta propre copie du jeu.
 Page du projet : https://github.com/DreaXer/40WinksRecomp
 
@@ -13,13 +13,17 @@ Uniquement la version finale N64 de Piko Interactive (Europe) :
 
 COMMENT JOUER
 -------------
-1. Lance 40WinksRecompiled.exe.
+1. Lance 40WinksRecompiled.exe (Windows), ou sous Linux ouvre un terminal dans ce dossier et lance
+   ./40WinksRecompiled (depuis ce dossier : il a besoin de assets/).
 2. Choisis ta ROM de 40 Winks quand c'est demandé (premier lancement seulement ; une mauvaise ROM est refusée
    avec la raison).
 3. Lance le jeu depuis le launcher.
-Les réglages et les sauvegardes sont dans %LOCALAPPDATA%\40WinksRecompiled\.
+Les réglages et les sauvegardes sont dans %LOCALAPPDATA%\40WinksRecompiled\ (Windows)
+ou ~/.config/40WinksRecompiled/ (Linux).
 
-Configuration : Windows 10/11 64 bits, une carte graphique Direct3D 12 ou Vulkan 1.2, un processeur avec AVX.
+Configuration : Windows 10/11 64 bits ou Linux x86-64, une carte graphique Direct3D 12 ou Vulkan 1.2 (Vulkan sous
+Linux), un processeur avec AVX. Linux demande aussi SDL2, GTK 3, FreeType, libcurl et le chargeur Vulkan
+(Ubuntu/Debian : sudo apt install libsdl2-2.0-0 libgtk-3-0 libfreetype6 libcurl4 libvulkan1).
 Si le jeu plante au démarrage, mets à jour les pilotes de ta carte graphique.
 
 ÉTAT ACTUEL
@@ -36,8 +40,9 @@ PROBLÈMES CONNUS
 SIGNALER UN BUG
 ---------------
 https://github.com/DreaXer/40WinksRecomp/issues
-Indique : la version, ta version de Windows, l'endroit, ce que tu faisais juste avant, ce qui s'est passé (capture si
-possible), tes réglages Framerate et Aspect Ratio, et pour un plantage le fichier 40winks-log.txt à côté de l'exécutable.
+Indique : la version, ta version de Windows ou ta distribution Linux, l'endroit, ce que tu faisais juste avant, ce qui s'est passé (capture si
+possible), tes réglages Framerate et Aspect Ratio, et pour un plantage le fichier 40winks-log.txt à côté de l'exécutable
+(sous Linux, dans le dossier d'où tu l'as lancé).
 
 LICENCE
 -------
