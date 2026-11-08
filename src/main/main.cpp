@@ -393,6 +393,8 @@ namespace {
     }
 
     // The UI renderer does not read files: the PNG bytes are handed to it under the name used by the element.
+    // Elements use "/" + name: RmlUi prefixes a relative src with the document folder ("assets/" on Linux), and
+    // strips a leading "/" instead, so the name stays the queued one on every OS.
     // Returns the PNG's width and height (read from its IHDR chunk), 0 x 0 if the file is missing.
     std::pair<int, int> queue_launcher_image(const std::string &path) {
         static std::map<std::string, std::pair<int, int>> queued;
@@ -438,7 +440,7 @@ namespace {
                 continue;
             }
             auto [w, h] = it->second;
-            auto *img = context.create_element<recompui::Image>(row, "menu_font/" + name);
+            auto *img = context.create_element<recompui::Image>(row, "/menu_font/" + name);
             img->set_width(height * w / h, recompui::Unit::Dp);
             img->set_height(height, recompui::Unit::Dp);
             // The letters have dark outlines that touch: overlap them slightly like the game's menus.
@@ -525,7 +527,7 @@ namespace {
         for (auto &m : menu_font_options) {
             m.option->get_label()->set_display(recompui::Display::None);
             menu_font_word(m.option, m.title, menu_letter_height, m.letters);
-            m.sparkle = context.create_element<recompui::Image>(m.option, "menu_font/sparkle");
+            m.sparkle = context.create_element<recompui::Image>(m.option, "/menu_font/sparkle");
             m.sparkle->set_position(recompui::Position::Absolute);
             m.sparkle->set_width(menu_sparkle_size, recompui::Unit::Dp);
             m.sparkle->set_height(menu_sparkle_size, recompui::Unit::Dp);
@@ -540,7 +542,7 @@ namespace {
         auto context = recompui::get_current_context();
         auto make = [&](const char *path) {
             queue_launcher_image(path);
-            auto *img = context.create_element<recompui::Image>(container, path);
+            auto *img = context.create_element<recompui::Image>(container, std::string("/") + path);
             img->set_position(recompui::Position::Absolute);
             img->set_opacity(0.0f);
             return img;
@@ -644,7 +646,7 @@ namespace {
                 snprintf(style, sizeof(style), "height: %.2fem; width: %.2fem; transform: rotate(%.1fdeg);",
                     letter_em, letter_em * w / h, 8.0f * std::sin(i * 2.39996f));
             }
-            rml += "<img src=\"menu_font/" + name + "\" style=\"" + style + "\"/>";
+            rml += "<img src=\"/menu_font/" + name + "\" style=\"" + style + "\"/>";
             total_em += letter_em * w / h;
         }
         // One block of explicit width: RmlUi's shrink-to-fit underestimates a run of inline images by about one letter
@@ -670,7 +672,7 @@ namespace {
         recompui::Element *holder = modal->get_background_holder();
         if (config_background == nullptr) {
             queue_launcher_image("icons/background.png");
-            config_background = recompui::get_current_context().create_element<recompui::Image>(holder, "icons/background.png");
+            config_background = recompui::get_current_context().create_element<recompui::Image>(holder, "/icons/background.png");
             config_background->set_position(recompui::Position::Absolute);
         }
         cover_background(config_background, holder);
@@ -984,7 +986,7 @@ int main(int argc, char** argv) {
         }
         constexpr float knob_height = 48.0f;
         auto [iw, ih] = menu_glyph_sizes["I"];
-        slider->use_game_images("menu_font/underline", "menu_font/I", knob_height * 474.0f / 158.0f,
+        slider->use_game_images("/menu_font/underline", "/menu_font/I", knob_height * 474.0f / 158.0f,
             knob_height * 38.0f / 158.0f, knob_height * iw / ih, knob_height, 0.69f);
     });
 
