@@ -195,6 +195,28 @@ if (WIN32)
     target_link_libraries(40WinksRecompiled PRIVATE SDL2 Winmm.lib)
 endif()
 
+# Same as dk64recomp. The binary looks for assets/ and recompcontrollerdb.txt in the working directory:
+# run it from the project root (or the extracted release folder). Build: ./build-linux.sh
+if (CMAKE_SYSTEM_NAME MATCHES "Linux")
+    find_package(SDL2 REQUIRED)
+    find_package(X11 REQUIRED)
+
+    add_compile_definitions("PLUME_SDL_VULKAN_ENABLED")
+    add_compile_definitions("RT64_SDL_WINDOW_VULKAN")
+
+    target_include_directories(40WinksRecompiled PRIVATE ${SDL2_INCLUDE_DIRS} ${X11_INCLUDE_DIR} ${X11_Xrandr_INCLUDE_PATH})
+    target_link_libraries(40WinksRecompiled PRIVATE ${X11_LIBRARIES} ${X11_Xrandr_LIB})
+
+    find_package(Freetype REQUIRED)
+    target_link_libraries(40WinksRecompiled PRIVATE ${FREETYPE_LIBRARIES} SDL2::SDL2)
+
+    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+    set(THREADS_PREFER_PTHREAD_FLAG TRUE)
+    find_package(Threads REQUIRED)
+
+    target_link_libraries(40WinksRecompiled PRIVATE "-latomic -static-libstdc++" ${CMAKE_DL_LIBS} Threads::Threads)
+endif()
+
 # TODO fix the rt64 CMake script so that this doesn't need to be duplicated here
 # For DXC
 set (DXC_COMMON_OPTS "-I${PROJECT_SOURCE_DIR}/src")
